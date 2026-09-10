@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+
+# Checkpoints are ~1.1GB each and live in S3, not git.
+*.pt
+*.pt.tmp
+
+# Generated artefacts. The tokenizer is rebuilt by scripts/train_tokenizer.py,
+# but note that a DIFFERENT tokenizer silently invalidates every checkpoint --
+# the one a run actually used is published alongside its weights in S3.
+tokenizer.json
+
+# Durable run metrics are mirrored to S3 with their checkpoints; keeping them
+# here would mix one machine's history into the source tree.
+*.jsonl
+*.npy
+*.npz
+metrics/
