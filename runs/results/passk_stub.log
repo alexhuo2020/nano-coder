@@ -1,0 +1,50 @@
+W0910 22:00:59.736000 72875 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0910 22:00:59.736000 72875 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0910 22:00:59.797000 72875 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0910 22:00:59.797000 72875 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0910 22:00:59.797000 72875 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0910 22:00:59.798000 72875 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0910 22:00:59.798000 72875 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0910 22:00:59.798000 72875 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0910 22:00:59.799000 72875 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0910 22:00:59.799000 72875 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0910 22:00:59.799000 72875 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0910 22:00:59.800000 72875 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0910 22:00:59.800000 72875 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0910 22:00:59.800000 72875 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[scenario] built 20 verified repo scenarios [difficulty=stub] (rejected: 0 no reference, 0 reference fails its own tests, 0 no breakage worked)
+W0910 22:01:26.017000 72875 torch/_dynamo/convert_frame.py:2008] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0910 22:01:26.017000 72875 torch/_dynamo/convert_frame.py:2008] [0/8]    function: 'flex_attention' (/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2365)
+W0910 22:01:26.017000 72875 torch/_dynamo/convert_frame.py:2008] [0/8]    last reason: 0/7: tensor 'key' size mismatch at index 2. expected 413, actual 478
+W0910 22:01:26.017000 72875 torch/_dynamo/convert_frame.py:2008] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0910 22:01:26.017000 72875 torch/_dynamo/convert_frame.py:2008] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2596: UserWarning: flex_attention called without torch.compile() - this will use an unfused implementation that materializes the full scores matrix instead of generating a fused kernel.
+
+SOLUTION: Use torch.compile(flex_attention)(...)
+
+If you want to debug your score_mod/mask_mod, you can set:
+torch.nn.attention.flex_attention._FLEX_ATTENTION_DISABLE_COMPILE_DEBUG = True
+
+This will allow you to use print statements or breakpoints. Note: This doesn't work with the backwards pass and may produce incorrect results.
+  _warn_once(
+
+=== tier=stub  20 tasks x 12 samples = 240 episodes ===
+pass@1              0.0% +-0.0   (0/240 samples)
+pass@12             0.0%          (0/20 tasks ever solved)
+any partial credit  0.0%          (0/240 samples with reward>0)
+what it left in solution.py: {'still a stub': 236, 'syntax error': 3, 'valid python': 1}
+
+--- 615  reward=0.00 ----------------------------------------
+def average_tuple((10, 10, 10, 12), (30, 45, 56, 45), (81, 80,xos,▀,animation0, premistate0, premistate1, CustomerLevel,toarrayin0, 1956, 2004))==[30.5, 34.25, 27.0, 23.25]
+--- 601  reward=0.00 ----------------------------------------
+defreduce(a, b):
+--- 608  reward=0.00 ----------------------------------------
+defoperations
+--- 607  reward=0.00 ----------------------------------------
+import re
+text = 'Themutalge?'
+match = re.search(pattern, texteline, re. coded = Terms of Service
+print(match)

@@ -16,3 +16,21 @@ tokenizer.json
 *.npy
 *.npz
 metrics/
+
+# LaTeX build products. report.pdf is COMMITTED deliberately -- it is the
+# deliverable, and it must not depend on a reader having MiKTeX installed.
+report/*.aux
+report/*.log
+report/*.out
+report/build*.log
+report/b1.log
+report/b2.log
+
+# ...but the metrics the report is BUILT from are evidence, not machine
+# history, so they are tracked despite the *.jsonl rule above. Without them
+# report/make_figures.py cannot run and every figure becomes unverifiable.
+!runs/metrics/
+!runs/metrics/*.jsonl
+!runs/metrics/*.csv
+!runs/metrics/*.json
+!runs/results/*

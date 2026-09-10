@@ -1,26 +1,50 @@
 # blackwell-nanogpt
 
 The complete modern LLM loop - **pretraining → SFT → RL → agentic RL** - on a
-single NVIDIA RTX PRO Blackwell GPU, in about three days and $120.
+single NVIDIA RTX PRO Blackwell GPU, in about four days and ~$180.
 
 Every architectural and precision decision here was chosen from measurements on
 the actual hardware, and the measurements are published below **including the
 negative results**, which are the more useful half. If you have been told that
 Blackwell's headline feature is NVFP4, the first table will be a surprise.
 
-Status: model + correctness tests measured and passing on real hardware.
-Pretraining and post-training scripts in progress; the post-training stages
-adapt a pipeline already validated end-to-end on this hardware.
+**Status: all four stages have run to completion on real hardware.** 20.40B
+tokens pretrained (held-out 2.1817 → 2.1155), SFT (format compliance 0% →
+100%), GRPO with execution-verified rewards, and multi-turn agentic RL against
+real repositories.
 
-## Target
+> ### 📄 [Full project report (PDF)](report/report.pdf)
+>
+> 8 pages, figures generated from `runs/metrics/`. Rebuild with
+> `bash report/build.sh`.
+>
+> **Read the retraction first.** The headline agentic result - a 70% solve rate
+> on repository repair - **does not hold up.** Re-probed against harder
+> breakages of the same tasks it scores **0 of 120**, twice: it had been
+> measuring the reversal of single-token mutations, not the repair of code. A
+> follow-up pass@12 probe found 0/240 samples with *any* partial credit, and
+> that in **236 of 240 episodes the model wrote the unchanged stub back to
+> disk.** Details in [the hardness audit](#the-70-solve-rate-on-these-repos-was-an-artifact-measured)
+> below and §6 of the report.
+>
+> The load-bearing conclusion: at 85M parameters an agentic **tool workflow**
+> and the ability to **write code** are separable capabilities, and only the
+> first is reachable.
 
-| | |
-|---|---|
-| Model | 129M params, GPT-2-small class |
-| Hardware | 1x RTX PRO 6000 Blackwell (96GB) - also runs on a PRO 4500 (32GB) |
-| Pretrain | ~37B tokens in 3 days (289 tokens/param) |
-| Full loop | ~82 hours, ~$118 at $1.43/hr spot |
-| Goal | output that reads as acceptable English/code. It will be wrong often; it should not be word salad. |
+## Target vs achieved
+
+Both columns are kept because the gap is informative - and because a design
+target left standing as if it were a result is how this project's other stale
+numbers happened.
+
+| | design target | **achieved** |
+|---|---|---|
+| Model | 129M params, GPT-2-small class | **85M params**, d_model 1536, 1 block x 8 loops |
+| Hardware | 1x RTX PRO 6000 (96GB) | PRO 4500 (32GB) for most stages; PRO 6000 for the final 4.0B tokens |
+| Pretrain | ~37B tokens in 3 days (289 tok/param) | **20.40B tokens** (240 tok/param), held-out CE **2.1155** |
+| Throughput | - | 45,146 tok/s (PRO 4500); **119,807 tok/s** (PRO 6000, tuned) |
+| Full loop | ~82 hours, ~$118 at $1.43/hr spot | ~4 days, **~$180** incl. all post-training and probes |
+| Goal | output that reads as acceptable English/code; wrong often, not word salad | **met for simple prompts.** Not met for writing code: 0/240 from a stub |
 
 ## What the hardware actually rewards
 
@@ -537,16 +561,24 @@ control run separates the two, and it passes.
 
 ## Honest limits
 
-- Absolute throughput numbers are measured on a **PRO 4500** (32GB). PRO 6000
-  figures are scaled by **1.726x**, itself measured (the same model at 45,146
-  vs 77,900 tok/s on the two cards). Nothing here has run on a PRO 6000 -
-  `g7e` spot and on-demand capacity failed ~13 consecutive attempts.
+- Throughput: the **PRO 4500** (32GB) sustained **45,146 tok/s**. A **PRO 6000**
+  (96GB) later ran the final 4.0B tokens and sustained a mean of **119,807
+  tok/s** (median 119,848, max 121,020) after the batch size was raised to fill
+  96GB - a measured **2.65x**, cross-checked against wall clock (9.27h for
+  4.0B tokens implies 119,770 tok/s).
+  <br>*This bullet previously read "PRO 6000 figures are scaled by 1.726x ...
+  nothing here has run on a PRO 6000". Both halves were true when written and
+  both were still here long after a PRO 6000 had run at 120k tok/s. The number
+  was never re-read against the metrics that disproved it - the same failure as
+  the 70% retraction above, in a cheaper place.*
 - This does **not** beat an H100 on speed, and nothing on this hardware does:
   the memory-bandwidth gap is roughly 2x and was immovable across three
   toolchain upgrades. Blackwell wins on **cost** - $1.43 vs $2.58 per GPU-hour,
   so it wins tokens-per-dollar while staying within 1.81x on speed.
-- 129M produces *acceptable-looking* output, not correct output. That is the
-  stated goal, and it should be judged against it.
+- The trained model (85M) produces *acceptable-looking* output, not correct
+  output - and the hardness audit above shows how far that gap goes: it cannot
+  write a function body it was not shown (0/240 from a stub). Judge it against
+  the stated goal, which was to validate the pipeline.
 - **The agentic stage learns, on a task set it then exhausts.** 400 steps took
   reward 0.183 -> 0.656 and full-solve rate 15.6% -> 52.5%, but zero-variance
   groups rose to 90% because the 12-task easy set runs out of signal. The repo
