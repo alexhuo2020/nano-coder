@@ -75,6 +75,11 @@ def main():
                         "with MCP-shaped tools. The reward is then the repo's file "
                         "state, not text extracted from the transcript.")
     p.add_argument("--task-limit", type=int, default=None)
+    p.add_argument("--difficulty", default="mutate",
+                   choices=["mutate", "multi", "stub", "swap"],
+                   help="repo modes: how solution.py is broken. mutate is one "
+                        "regex substitution and may be FLATTERING -- stub and "
+                        "swap cannot be solved by spotting an odd token.")
     p.add_argument("--steps", type=int, default=300)
     p.add_argument("--group-size", type=int, default=6, help="episodes per task")
     p.add_argument("--max-turns", type=int, default=3)
@@ -139,7 +144,8 @@ def main():
         # (reference must pass, mutation must fail), and rebuilding every epoch
         # would make the data pipeline the bottleneck.
         tasks = build_scenarios(tasks, seed=a.seed, limit=a.task_limit,
-                                timeout=a.tool_timeout)
+                                timeout=a.tool_timeout,
+                                difficulty=a.difficulty)
     toolbox = ToolBox(timeout=a.tool_timeout)
     log(f"task set {a.task_set!r}: {len(tasks)} "
         f"{'repo scenarios' if repo_mode else 'tasks'} | {gcfg.group_size} "

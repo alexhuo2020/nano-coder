@@ -46,6 +46,11 @@ from blackwell_lm.scenario import cleanup
 class RepoEpisode:
     scenario_name: str
     messages: list
+    # Where the work product lives. Only meaningful with keep_repo=True, but
+    # recording it is what MAKES keep_repo usable: the agent's output IS the
+    # file, so a caller that cannot find the directory cannot inspect what the
+    # agent did (and cannot clean it up either).
+    repo: str = ""
     turns: int = 0
     tool_calls: int = 0
     tool_errors: int = 0
@@ -94,6 +99,7 @@ def run_repo_episode(model, tok, scenario, eos_id: int, max_turns: int = 6,
                      timeout=tool_timeout)
     ep = RepoEpisode(
         scenario_name=scenario.name,
+        repo=repo,
         messages=[{"role": chat.SYSTEM, "content": render_system_prompt()},
                   {"role": chat.USER, "content": scenario.prompt}],
     )

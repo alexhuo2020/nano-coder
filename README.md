@@ -484,6 +484,44 @@ Verified end to end: broken `return a - b` -> `1/3 tests` -> agent writes a fix
 all returned as readable errors rather than exceptions. Available as
 `--task-set repo-easy` / `repo-mbpp`.
 
+#### The 70% solve rate on these repos was an artifact. Measured.
+
+Trained on `repo-mbpp`, an A/B took the solve rate 50% -> 70% and self-
+verification 8% -> 91%. That looked like the headline result of the whole
+project, and it was wrong -- so before building anything on top of it, the same
+checkpoint was re-probed against harder breakages of the *same* tasks:
+
+| tier | how `solution.py` is broken | n | solved +-SE | wrote a file +-SE |
+|------|------------------------------|---|-------------|-------------------|
+| `mutate` | one regex substitution (`+`->`-`) | 120 | **59% +-4** | 86% +-3 |
+| `multi`  | two substitutions at once | 120 | **60% +-4** | 86% +-3 |
+| `stub`   | function body replaced by `pass` | 120 | **0% +-0** | 98% +-1 |
+| `swap`   | a *different* task's real solution | 120 | **0% +-0** | 93% +-2 |
+
+**Zero of 120, twice.** The 70% measured "revert the token that looks odd", not
+"fix the code". `stub` and `swap` are the honest tiers precisely because neither
+can be solved by spotting a suspicious character.
+
+The tell was visible beforehand and nearly ignored: the same checkpoint solves
+**9/300 (3%)** of single-turn MBPP. A 20x gap between writing a solution and
+repairing one should have been suspicious on sight -- single-token reversal is a
+keyhole skill that reads as debugging.
+
+Note the direction of the `wrote a file` column: **93-98% on the hard tiers,
+higher than on the easy ones.** The agentic workflow is genuinely learned -- it
+reads, edits and verifies. It just writes wrong code with total confidence. Tool
+use and coding are separable capabilities, and at 85M only the first is
+reachable.
+
+**Consequence: teacher distillation was designed and then not built.** The
+obvious escalation was to have a strong agent generate trajectories to imitate.
+It would not have helped, and the table says why: demonstrations teach the
+*shape* of read -> edit -> verify, which this model has already mastered at
+93-98%. They cannot install the ability to write correct Python into 85M
+parameters. Distilling would have produced a model imitating a strong agent's
+edit structure while emitting wrong bodies -- the current failure exactly. A
+20-minute probe replaced an API budget and several GPU-hours.
+
 ### Honest summary
 
 All four stages are demonstrated end to end on real hardware. The resulting 85M
@@ -492,7 +530,8 @@ tools multi-turn with real execution feedback -- the stated bar was "may make
 errors but should look acceptable", and that is met for simple prompts.
 
 What it does NOT do: solve MBPP (9/300 tasks; 1.4% of samples earn any credit),
-or show a convincing reward trend in the agentic stage. Those are honest
+or write a function body it was not shown -- 0/120 on the `stub` and `swap`
+tiers, while still writing the file 93-98% of the time. Those are honest
 limits of an 85M model at 240 tokens/param, not pipeline defects -- the easy-set
 control run separates the two, and it passes.
 
@@ -511,7 +550,9 @@ control run separates the two, and it passes.
 - **The agentic stage learns, on a task set it then exhausts.** 400 steps took
   reward 0.183 -> 0.656 and full-solve rate 15.6% -> 52.5%, but zero-variance
   groups rose to 90% because the 12-task easy set runs out of signal. The repo
-  scenarios exist to replace it; they are built and tested but not yet trained on.
+  scenarios replaced it and trained (50% -> 70% solved, 8% -> 91% verified) --
+  but that gain lives **entirely** on the one-token-mutation tier and is 0% on
+  `stub`/`swap`. See the hardness table above; treat the 70% as void.
 - **bf16 parameters cannot be the optimizer's state.** TE's NVFP4 path requires
   bf16 params, but an AdamW update below the bf16 spacing rounds away entirely:
   pretraining ran 657,000 steps with all five RMSNorm gains still bit-exactly

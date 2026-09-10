@@ -6,6 +6,7 @@ reads the FILE rather than the transcript, that paths cannot escape the repo,
 and that each episode gets an independent copy of the repo.
 """
 import os
+import textwrap
 import random
 
 import torch
@@ -257,6 +258,57 @@ def test_verify_bonus_requires_a_genuine_verified_pass():
         cleanup(repo)
 
 
+def test_hard_tiers_cannot_be_solved_by_spotting_an_odd_token():
+    """The whole point of `stub` and `swap` is that inspection cannot find the
+    bug. That is a property worth ASSERTING, because it is exactly the property
+    the easy tier turned out to lack: a 70% solve rate there collapsed to 0/120
+    here, which means the tier definition -- not the policy -- was carrying the
+    result. If a refactor ever let `stub` keep a hint of the answer in the file,
+    the benchmark would silently go flattering again and the number would look
+    like progress.
+    """
+    import random
+
+    from blackwell_lm.scenario import _breakages, _stub, _swap
+
+    ref = textwrap.dedent("""
+        def add(a, b):
+            total = a + b
+            return total
+    """).strip() + "\n"
+    other = textwrap.dedent("""
+        def factorial(n):
+            return 1 if n < 2 else n * factorial(n - 1)
+    """).strip() + "\n"
+
+    stub = next(_stub(ref))
+    assert "def add(a, b):" in stub, "the signature must survive: the agent needs the name"
+    assert "return" not in stub, "a `return` left behind leaks the answer"
+    assert "total" not in stub, "the body must be gone, not merely broken"
+    compile(stub, "s.py", "exec")     # must still import, or the task is a SyntaxError hunt
+
+    swap = next(_swap(ref, [other, ref], random.Random(0)))
+    assert swap.strip() == other.strip(), "swap must install ANOTHER task's solution"
+    compile(swap, "s.py", "exec")     # plausible, working code -- for the wrong problem
+    assert swap.strip() != ref.strip(), "swapping in the reference would make the task free"
+
+    # A swap pool holding nothing but the reference must yield NOTHING rather
+    # than silently handing the agent the answer.
+    assert next(_swap(ref, [ref], random.Random(0)), None) is None
+
+    for tier in ("mutate", "multi", "stub", "swap"):
+        got = next(_breakages(ref, random.Random(0), tier, [other]), None)
+        assert got and got.strip() != ref.strip(), f"{tier} produced no real breakage"
+    try:
+        next(_breakages(ref, random.Random(0), "nonsense", None))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(
+            "an unknown difficulty must fail loudly, not fall back to the easy tier")
+    print("test_hard_tiers_cannot_be_solved_by_spotting_an_odd_token: PASS")
+
+
 if __name__ == "__main__":
     test_system_prompt_is_generated_from_the_tool_declarations()
     test_scenario_breakage_is_verified_both_ways()
@@ -267,5 +319,6 @@ if __name__ == "__main__":
     test_scenario_pool_reports_its_rejections()
     test_repo_sft_trajectory_teaches_the_write_file_schema()
     test_verify_bonus_requires_a_genuine_verified_pass()
+    test_hard_tiers_cannot_be_solved_by_spotting_an_odd_token()
     test_run_repo_episode_terminates_and_cleans_up()
     print("All test_repo_agent_cpu tests passed.")
