@@ -595,6 +595,17 @@ control run separates the two, and it passes.
 - **A rolling training loss cannot detect any of this.** It missed a real
   regression, then twice signalled a plateau that was not one. Every quality
   claim here comes from a fixed held-out set instead.
+- **Terminating a GPU instance does not shut it down if an ASG owns it.** On
+  teardown I terminated the box, verified every checkpoint was in S3, and
+  reported billing stopped - and three minutes later a *new* g7.2xlarge was
+  running, because `blackwell-nanogpt-asg` had replaced it, doing exactly the
+  job it was built for. The tell is the instance's `aws:autoscaling:groupName`
+  tag. Scale every ASG to `0/0/0` **first**, then terminate, then cancel the
+  spot request, then verify all three are empty. A second ASG was worse: it sat
+  at min=desired=1 with *zero* instances because PRO 6000 capacity was
+  unavailable, permanently hunting - it would have launched a $1.43/hr GPU
+  whenever capacity freed, possibly weeks later. **An ASG with desired>0 and no
+  instances is not idle, it is waiting.**
 - **The sandbox is a robustness boundary, not a containment boundary.** It
   applies POSIX rlimits, an isolated interpreter, a throwaway directory and
   process-group kills, but creates no network, mount or PID namespace. Run the

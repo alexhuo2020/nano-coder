@@ -503,6 +503,19 @@ is published alongside its weights, and its size was verified byte-for-byte
 \subsection{Operational notes worth carrying forward}
 
 \begin{itemize}
+\item \textbf{Terminating a GPU instance does not shut it down if an Auto
+Scaling Group owns it.} On teardown the instance was terminated, every
+checkpoint was verified present in S3, and billing was reported stopped --- and
+three minutes later a \emph{new} \code{g7.2xlarge} was running, because the
+self-healing spot ASG built for unattended runs had replaced it, doing exactly
+its job. Scale every ASG to $0/0/0$ \emph{first}, then terminate, then cancel
+the spot request, then verify all three are empty. A second ASG was worse: it
+sat at $\text{min}=\text{desired}=1$ with \emph{zero} instances because PRO
+6000 capacity was unavailable, and would have launched a GPU whenever capacity
+freed, potentially weeks later. \textbf{An ASG with desired ${>}0$ and no
+instances is not idle; it is waiting.} Before terminating a resurrected box,
+check whether it wrote to S3 --- the launch template auto-resumes, so a
+replacement can overwrite good checkpoints (here it wrote nothing).
 \item \textbf{Ghost spot requests hold quota.} An \emph{active} one-time spot
 request pointing at an already-terminated instance consumed GPU quota and caused
 AWS to report \code{MaxSpotInstanceCountExceeded}. Roughly $15$ launch attempts
