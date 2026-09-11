@@ -238,7 +238,7 @@ def run(body, truncate: bool, max_new: int, claude_code: bool = False):
     with LOCK:
         t0 = time.time()
         toks, valid, _ = generate(model, ids, max_new_tokens=max_new,
-                                  eos_id=STATE["eos"], temperature=0.7,
+                                  eos_id=STATE["eos"], temperature=H.temperature,
                                   num_return_sequences=1,
                                   n_loops=cfg.n_loops)
         dt = time.time() - t0
@@ -258,6 +258,15 @@ class H(BaseHTTPRequestHandler):
     claude_code = False
     cwd = os.getcwd()
     dump_prompt = False
+    # 0.2, not the 0.7 that used to be hardcoded here and not the 1.0 the RL
+    # rollouts use. MEASURED on 120 episodes/tier, same checkpoint:
+    #   T=1.0  mutate 52.5%  stub  7.5%
+    #   T=0.5  mutate 74.2%  stub 25.0%
+    #   T=0.2  mutate 76.7%  stub 31.7%
+    # T=1.0 is correct for RL EXPLORATION and badly wrong for SOLVING; every
+    # earlier figure in this project, including a reported 0/240 "capability
+    # ceiling", was taken at 1.0.
+    temperature = 0.2
 
     def log_message(self, *a):
         pass
@@ -365,7 +374,7 @@ class H(BaseHTTPRequestHandler):
         with LOCK:
             t0 = time.time()
             toks, valid, _ = generate(model, ids, max_new_tokens=self.max_new,
-                                      eos_id=STATE["eos"], temperature=0.7,
+                                      eos_id=STATE["eos"], temperature=H.temperature,
                                       num_return_sequences=1,
                                       n_loops=cfg.n_loops)
             dt = time.time() - t0
@@ -492,6 +501,9 @@ if __name__ == "__main__":
     ap.add_argument("--cwd", default=os.getcwd(),
                     help="fallback working directory for resolving the "
                          "relative paths the model emits")
+    ap.add_argument("--temperature", type=float, default=0.2,
+                    help="sampling temperature (default 0.2, measured best; "
+                         "see the table on H.temperature)")
     ap.add_argument("--dump-prompt", action="store_true",
                     help="log the prompt actually rendered for the model; the "
                          "fastest way to see that a client's scaffolding is "
@@ -504,6 +516,7 @@ if __name__ == "__main__":
     H.truncate, H.max_new = a.truncate, a.max_new
     H.claude_code, H.cwd = a.claude_code, a.cwd
     H.dump_prompt = a.dump_prompt
+    H.temperature = a.temperature
     if a.claude_code:
         print(f"[shim] claude-code mode: model's own system prompt, "
               f"tool_use translation, cwd fallback {a.cwd}", flush=True)

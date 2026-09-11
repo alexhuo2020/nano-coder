@@ -44,6 +44,10 @@ def main():
     ap.add_argument("--samples", type=int, default=6)
     ap.add_argument("--max-turns", type=int, default=6)
     ap.add_argument("--task-set", default="mbpp")
+    ap.add_argument("--holdout", type=int, default=0,
+                    help="evaluate ONLY on the last N tasks, which must match "
+                         "train_sft.py --tool-holdout. Anything else reports "
+                         "train accuracy.")
     ap.add_argument("--n-loops", type=int, default=None,
                     help="override the loop count at inference (weight-shared "
                          "depth). The depth ablation minimised held-out LOSS "
@@ -73,6 +77,11 @@ def main():
     n_loops = a.n_loops or cfg.n_loops
 
     tasks = get_tasks(a.task_set)
+    if a.holdout:
+        tasks = tasks[-a.holdout:]
+        print(f"[scoreboard] HELD-OUT split: {len(tasks)} tasks "
+              f"({tasks[0].name}..{tasks[-1].name}), none of them seen in "
+              f"training", flush=True)
     name = os.path.basename(a.ckpt)
     n = a.tasks * a.samples
     print()

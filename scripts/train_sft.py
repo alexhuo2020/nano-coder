@@ -141,6 +141,12 @@ def main():
                         "stub; trained only on stub it scored 0/240 on swap. "
                         "A mixture is the only way to get one model that "
                         "handles all of them.")
+    p.add_argument("--tool-holdout", type=int, default=0,
+                   help="reserve the LAST N tool tasks for evaluation and "
+                        "never build demos from them. Without this, training "
+                        "uses every MBPP task and the scoreboard draws its "
+                        "tasks from the same pool, so the reported pass@1 is "
+                        "TRAIN accuracy wearing the clothes of a benchmark.")
     p.add_argument("--tool-retry-frac", type=float, default=0.0,
                    help="share of repo demos that are RETRY trajectories "
                         "(wrong fix -> failing tests -> correct fix). Every "
@@ -198,6 +204,12 @@ def main():
         from blackwell_lm.tool_sft import stream_tool_sft
 
         base_tasks = get_tasks(a.tool_task_set)
+        if a.tool_holdout:
+            held = base_tasks[-a.tool_holdout:]
+            base_tasks = base_tasks[:-a.tool_holdout]
+            print(f"[sft] holdout: training on {len(base_tasks)} tool tasks, "
+                  f"reserving {len(held)} ({held[0].name}..{held[-1].name}) "
+                  f"for evaluation", flush=True)
         if a.tool_mode == "snippet":
             tool_stream = stream_tool_sft(base_tasks, seed=1)
         else:
