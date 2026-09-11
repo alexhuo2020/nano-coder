@@ -134,15 +134,22 @@ def main():
                         "(measured: 0 tool calls in 100 episodes).")
     p.add_argument("--tool-task-set", default="mbpp", choices=["mbpp", "easy"])
     p.add_argument("--tool-difficulty", default="mutate",
-                   choices=["mutate", "multi", "stub", "swap"],
-                   help="how the repo demos' solution.py is broken. THIS "
-                        "DECIDES WHAT THE DEMOS TEACH. The default mutate is a "
-                        "single regex substitution, so the demonstrated fix is "
-                        "'write the file back with one token changed' -- and "
-                        "that is what the policy learned: probed on stub tasks "
-                        "it wrote the UNCHANGED stub back in 236 of 240 "
-                        "episodes, having mastered copying rather than coding. "
-                        "stub demos instead show the whole body being written.")
+                   help="comma-separated tiers to build repo demos from, e.g. "
+                        "'stub,swap,mutate'. ONE TIER TEACHES ONE PRIOR: "
+                        "trained only on mutate the policy learned 'write the "
+                        "file back with one token changed' and scored 0/240 on "
+                        "stub; trained only on stub it scored 0/240 on swap. "
+                        "A mixture is the only way to get one model that "
+                        "handles all of them.")
+    p.add_argument("--tool-retry-frac", type=float, default=0.0,
+                   help="share of repo demos that are RETRY trajectories "
+                        "(wrong fix -> failing tests -> correct fix). Every "
+                        "other demo is first-try-correct, so the policy has "
+                        "never been shown what to do with a failing test "
+                        "report -- driving a real CLI it reads, tests, then "
+                        "stops. pass@12 is 40% vs pass@1 9.6%, so the ability "
+                        "to land a second attempt exists and is unused.")
+
     p.add_argument("--tool-mode", default="snippet",
                    choices=["snippet", "repo", "both"],
                    help="snippet: run_tests(code) trajectories. repo: "
@@ -197,9 +204,24 @@ def main():
             from blackwell_lm.scenario import build_scenarios
             from blackwell_lm.tool_sft import stream_repo_sft
 
-            scns = build_scenarios(base_tasks, seed=1,
-                                   difficulty=a.tool_difficulty)
-            repo_stream = stream_repo_sft(scns, seed=1)
+            tiers = [t.strip() for t in a.tool_difficulty.split(",")
+                     if t.strip()]
+            valid = {"mutate", "multi", "stub", "swap"}
+            bad = [t for t in tiers if t not in valid]
+            if bad:
+                raise SystemExit(f"unknown --tool-difficulty tier(s): {bad}; "
+                                 f"choose from {sorted(valid)}")
+            scns = []
+            for ti, tier in enumerate(tiers):
+                # A distinct seed per tier: the same seed would pick the same
+                # tasks for every tier, so a "mixture" would be several views
+                # of one small task subset instead of broader coverage.
+                scns.extend(build_scenarios(base_tasks, seed=1 + ti,
+                                            difficulty=tier))
+            print(f"[sft] repo demo pool: {len(scns)} scenarios across "
+                  f"tiers {tiers}", flush=True)
+            repo_stream = stream_repo_sft(scns, seed=1,
+                                          retry_frac=a.tool_retry_frac)
             if a.tool_mode == "repo":
                 tool_stream = repo_stream
             else:

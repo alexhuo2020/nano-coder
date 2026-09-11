@@ -118,6 +118,19 @@ def test_parser_is_the_trained_one():
     print("adapter and training harness share one parser: PASS")
 
 
+def test_line_numbers_are_stripped_from_read_results():
+    """Claude Code's Read is cat -n style; the model's read_file is raw."""
+    numbered = "     1\tdef add(a, b):\n     2\t    return a - b\n"
+    assert A.strip_line_numbers(numbered) == "def add(a, b):\n    return a - b\n"
+    # a tab inside the line's own text must survive
+    assert A.strip_line_numbers("  3\tx = 'a\tb'") == "x = 'a\tb'"
+    # unnumbered output passes through untouched
+    plain = "3 passed in 0.10s"
+    assert A.strip_line_numbers(plain) == plain
+    assert A.strip_line_numbers("") == ""
+    print("Read line numbers stripped, inner tabs preserved: PASS")
+
+
 def test_cwd_extraction():
     assert A.extract_cwd("x\nWorking directory: /home/u/proj\ny",
                          "/fb") == "/home/u/proj"
@@ -180,6 +193,7 @@ if __name__ == "__main__":
     test_unknown_tool_is_not_silently_dropped()
     test_round_trip_back_into_the_models_format()
     test_parser_is_the_trained_one()
+    test_line_numbers_are_stripped_from_read_results()
     test_cwd_extraction()
     test_windows_client_paths_are_not_mangled()
     print("\nAll cli_adapter tests passed.")

@@ -1,0 +1,26 @@
+# Isolated Codex config for testing our own model.
+# CODEX_HOME points here so the user's real ~/.codex (which holds auth.json)
+# is never read or modified by these experiments.
+#
+# NOTE ON ORDERING: every top-level key must appear BEFORE the first [table]
+# header. TOML assigns keys to the most recent table, so sandbox_mode written
+# below [model_providers.bnano] silently becomes
+# model_providers.bnano.sandbox_mode -- accepted without complaint, and with
+# no effect.
+
+model = "blackwell-nanogpt-85m"
+model_provider = "bnano"
+
+# The CLI ran as "sandbox: read-only" despite --sandbox on the exec
+# subcommand, and its policy then rejected the command outright.
+sandbox_mode = "workspace-write"
+approval_policy = "never"
+
+[model_providers.bnano]
+name = "blackwell-nanogpt local shim"
+base_url = "http://127.0.0.1:8788/v1"
+wire_api = "responses"
+env_key = "BNANO_API_KEY"
+
+[sandbox_workspace_write]
+network_access = false

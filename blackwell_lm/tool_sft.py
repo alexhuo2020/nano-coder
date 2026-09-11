@@ -200,7 +200,81 @@ def make_repo_trajectory(scenario, tool_timeout: float = 10.0):
         cleanup(repo)
 
 
-def stream_repo_sft(scenarios, seed: int = 0, tool_timeout: float = 10.0):
+def make_repo_retry_trajectory(scenario, rng, tool_timeout: float = 10.0):
+    """read -> write a WRONG fix -> tests FAIL -> write the right fix -> pass.
+
+    WHY THIS SHAPE IS MISSING AND WHY IT MATTERS. Every trajectory above is
+    first-try-correct, so the policy has never been shown what to do with a
+    failing test report. Measured consequence, driving a real CLI: it reads the
+    file, runs the tests, sees "1/3 tests passed", and then stops -- it has no
+    demonstrated notion of using that output to try again.
+
+    The capability is there and unused: pass@12 is 40% where pass@1 is 9.6%, so
+    a second and third attempt would land far more often than the first. What
+    is missing is the habit of taking one.
+
+    The wrong first attempt is the scenario's OWN broken file (or another
+    mutation of it), so the failure is real and the test output is real -- not
+    a plausible-looking imitation of a failure, which would teach the model to
+    expect error text that never occurs.
+    """
+    from blackwell_lm.mcp_tools import RepoToolBox, render_system_prompt
+    from blackwell_lm.scenario import _breakages, cleanup
+
+    repo = scenario.materialise()
+    try:
+        tb = RepoToolBox(repo, tests=scenario.tests, setup=scenario.setup,
+                         timeout=tool_timeout)
+        msgs = [{"role": SYSTEM, "content": render_system_prompt()},
+                {"role": USER, "content": scenario.prompt}]
+
+        def turn(name, args):
+            msgs.append({"role": ASSISTANT,
+                         "content": "```tool\n"
+                                    + json.dumps({"name": name, "args": args})
+                                    + "\n```"})
+            out, ok = tb.dispatch(name, args)
+            msgs.append({"role": TOOL, "content": out})
+            return out, ok
+
+        turn("read_file", {"path": "solution.py"})
+
+        # A genuinely wrong first attempt: a fresh mutation of the reference,
+        # falling back to the scenario's own broken file.
+        wrong = next(_breakages(scenario.reference, rng, "mutate", None), None)
+        if not wrong or wrong.strip() == scenario.reference.strip():
+            wrong = scenario.broken
+        if not wrong or wrong.strip() == scenario.reference.strip():
+            return None
+
+        _, ok = turn("write_file", {"path": "solution.py", "content": wrong})
+        if not ok:
+            return None
+        out, _ = turn("run_tests", {})
+        full = f"{len(scenario.tests)}/{len(scenario.tests)}"
+        if out.startswith(full):
+            return None          # the "wrong" attempt passed: no failure to learn from
+
+        # Now the recovery, which is the behaviour being taught.
+        msgs.append({"role": ASSISTANT,
+                     "content": "That did not pass. Let me correct it."})
+        _, ok = turn("write_file", {"path": "solution.py",
+                                    "content": scenario.reference})
+        if not ok:
+            return None
+        out, _ = turn("run_tests", {})
+        if not out.startswith(full):
+            return None
+        msgs.append({"role": ASSISTANT,
+                     "content": "The tests pass now.\n```python\n"
+                                + scenario.reference + "\n```"})
+        return msgs
+    finally:
+        cleanup(repo)
+
+
+def stream_repo_sft(scenarios, seed: int = 0, tool_timeout: float = 10.0,
+                    retry_frac: float = 0.0):
     """Endless stream of repo trajectories, built once then cycled.
 
     Cached for the same reason as the snippet trajectories: each one costs
@@ -208,15 +282,30 @@ def stream_repo_sft(scenarios, seed: int = 0, tool_timeout: float = 10.0):
     pipeline the bottleneck instead of the GPU.
     """
     rng = random.Random(seed)
-    cache = []
+    cache, retries = [], []
     for sc in scenarios:
         m = make_repo_trajectory(sc, tool_timeout=tool_timeout)
         if m:
             cache.append(m)
+        if retry_frac > 0:
+            r = make_repo_retry_trajectory(sc, rng, tool_timeout=tool_timeout)
+            if r:
+                retries.append(r)
     if not cache:
         raise RuntimeError("no repo trajectories could be built")
     print(f"[tool_sft] cached {len(cache)} verified REPO trajectories "
-          f"from {len(scenarios)} scenarios", flush=True)
+          f"from {len(scenarios)} scenarios"
+          + (f", plus {len(retries)} RETRY trajectories "
+             f"(wrong fix -> failing tests -> correct fix)" if retries else ""),
+          flush=True)
+    if retries:
+        # Mixed into one pool rather than trained as a phase: tuned on retries
+        # last, the model learns to write a wrong answer first on purpose.
+        n_retry = max(1, int(len(cache) * retry_frac / max(1e-9, 1 - retry_frac)))
+        cache = cache + [retries[i % len(retries)] for i in range(n_retry)]
+        print(f"[tool_sft] pool is {len(cache)} trajectories "
+              f"({n_retry} of them retries, ~{n_retry / len(cache) * 100:.0f}%)",
+              flush=True)
     while True:
         rng.shuffle(cache)
         for m in cache:

@@ -122,6 +122,24 @@ def cli_call_to_model(name: str, tool_input: dict) -> dict:
     return {"name": mapped, "args": ti}
 
 
+# --------------------------------------------------------------- tool results
+_LINENO = re.compile(r"^\s*\d+\t", re.MULTILINE)
+
+
+def strip_line_numbers(text: str) -> str:
+    """Claude Code's Read returns cat -n style output ("   1\\tdef add(a, b):").
+
+    The model's trained `read_file` returns the RAW file, so the numbered form
+    is out of distribution in the one place it matters most -- the content it
+    is about to rewrite. Observed directly: handed a numbered file, the model
+    wrote back something unrelated to it.
+
+    Only a leading "<digits><TAB>" is removed, which is the exact shape the
+    client emits; a tab inside the line's own text is untouched.
+    """
+    return _LINENO.sub("", text or "")
+
+
 # ------------------------------------------------------------- outbound blocks
 #
 # THE PARSER IS IMPORTED, NOT REIMPLEMENTED. The RL and SFT harnesses decide

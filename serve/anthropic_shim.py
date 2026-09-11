@@ -40,6 +40,24 @@ from blackwell_lm.model import BlackwellLM, ModelConfig
 from blackwell_lm.tokenizer import EOS, load_tokenizer
 
 import cli_adapter
+import codex_adapter
+
+
+def codex_adapter_cwd(body, fallback: str) -> str:
+    """Codex states the cwd in its `instructions` / environment context.
+
+    Getting this wrong is the same silent failure as on the Anthropic path:
+    file operations run against a directory that does not exist on the
+    client, and the error looks like the model's fault.
+    """
+    text = body.get("instructions") or ""
+    for item in body.get("input") or []:
+        c = item.get("content")
+        if isinstance(c, list):
+            for blk in c:
+                if isinstance(blk, dict):
+                    text += "\n" + (blk.get("text") or "")
+    return cli_adapter.extract_cwd(text, fallback)
 
 SEP = "\n---\n"                  # separator for the --dump-prompt rendering
 LOCK = threading.Lock()          # one GPU, one decode at a time
@@ -184,7 +202,12 @@ def flatten_content_cc(content, role):
                                                     blk.get("input"))
             parts.append("```tool\n" + json.dumps(payload) + "\n```")
         elif t == "tool_result":
-            parts.append(flatten_content(blk.get("content")))
+            # Strip the client's cat -n line numbering: the model's trained
+            # read_file returns the raw file, and a numbered file is out of
+            # distribution exactly where it hurts -- the content it is about
+            # to rewrite.
+            parts.append(cli_adapter.strip_line_numbers(
+                flatten_content(blk.get("content"))))
     return "\n".join(p for p in parts if p)
 
 
@@ -252,6 +275,13 @@ class H(BaseHTTPRequestHandler):
         STATS["requests"] += 1
         i = STATS["requests"]
 
+        # Codex CLI speaks the OpenAI Responses API, not Anthropic's. Route on
+        # the path rather than on a flag so ONE server (and one loaded model,
+        # on one GPU) can serve both clients.
+        if self.path.rstrip("/").endswith("/responses"):
+            self._codex(body, i)
+            return
+
         text, info = run(body, self.truncate, self.max_new, self.claude_code)
         if self.dump_prompt:
             print("[shim] --- rendered prompt ---" + SEP
@@ -312,6 +342,63 @@ class H(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+
+    def _codex(self, body, i):
+        """Serve one OpenAI Responses-API turn for Codex CLI."""
+        from blackwell_lm.mcp_tools import render_system_prompt
+
+        turns = codex_adapter.input_to_turns(body)
+        msgs = [{"role": chat.SYSTEM, "content": render_system_prompt()}]
+        for role, txt in turns:
+            msgs.append({"role": {"user": chat.USER,
+                                  "assistant": chat.ASSISTANT,
+                                  "tool": chat.TOOL}[role], "content": txt})
+
+        tok, model, cfg = STATE["tok"], STATE["model"], STATE["cfg"]
+        ids = chat.tokenize_prompt(tok, msgs)
+        budget = STATE["ctx"] - self.max_new
+        n = len(ids)
+        if n > budget:
+            STATS["overflow"] += 1
+            ids = ids[-budget:]
+            n = budget
+        with LOCK:
+            t0 = time.time()
+            toks, valid, _ = generate(model, ids, max_new_tokens=self.max_new,
+                                      eos_id=STATE["eos"], temperature=0.7,
+                                      num_return_sequences=1,
+                                      n_loops=cfg.n_loops)
+            dt = time.time() - t0
+        text = tok.decode([int(t) for t, v in
+                           zip(toks[0].tolist(), valid[0].tolist()) if v])
+        STATS["served"] += 1
+
+        cwd = codex_adapter_cwd(body, self.cwd)
+        events, codex_tool, model_tool = codex_adapter.build_events(
+            text, cwd, body.get("model") or "blackwell-nanogpt-85m",
+            cli_adapter.split_model_output)
+        print(f"[shim] codex req {i}: prompt {n:,} tok "
+              f"(budget {budget:,}) -> {'FITS' if n < budget else 'TRUNCATED'}"
+              f", {dt:.2f}s", flush=True)
+        if model_tool:
+            print(f"[shim]   model called {model_tool!r} -> "
+                  f"{codex_tool or 'UNMAPPABLE (returned as text)'}", flush=True)
+        else:
+            print(f"[shim]   no tool call; replied with {len(text or '')} "
+                  f"chars of text", flush=True)
+        if self.dump_prompt:
+            print("[shim] --- rendered prompt ---" + SEP
+                  + SEP.join(f"[{m['role']}] {m['content']}" for m in msgs)[:2500]
+                  + SEP + "[shim] --- end prompt ---", flush=True)
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        for kind, obj in events:
+            self.wfile.write(f"event: {kind}\ndata: {json.dumps(obj)}\n\n"
+                             .encode())
+            self.wfile.flush()
 
     def _sse_blocks(self, resp):
         """Stream a prebuilt response, including tool_use blocks.
