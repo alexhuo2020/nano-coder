@@ -48,7 +48,7 @@ def test_prompt_is_exact_prefix_of_trained_sequence():
     full = msgs + [{"role": chat.ASSISTANT, "content": "def f():\n    pass"}]
 
     prompt = chat.tokenize_prompt(tok, msgs)
-    ids, mask = chat.tokenize_conversation(tok, full, eos)
+    ids, mask, _ = chat.tokenize_conversation(tok, full, eos)
     assert ids[:len(prompt)] == prompt, "rollout prompt is not a prefix of the trained sequence"
     assert sum(mask[:len(prompt)]) == 0, "prompt tokens are marked trainable"
     assert sum(mask[len(prompt):]) == len(ids) - len(prompt), "assistant body not fully trained"
@@ -59,7 +59,7 @@ def test_prompt_is_exact_prefix_of_trained_sequence():
 def test_assistant_turn_is_eos_terminated_and_trained():
     tok = _tok()
     eos = tok.token_to_id(EOS)
-    ids, mask = chat.tokenize_conversation(
+    ids, mask, _ = chat.tokenize_conversation(
         tok, chat.user_turn("q") + [{"role": chat.ASSISTANT, "content": "a"}], eos)
     assert ids[-1] == eos, "assistant turn does not end in EOS"
     assert mask[-1] == 1, "EOS is not trained on, so the model never learns to stop"
@@ -75,7 +75,7 @@ def test_headers_are_never_trainable():
             {"role": chat.ASSISTANT, "content": "BBB"},
             {"role": chat.USER, "content": "CCC"},
             {"role": chat.ASSISTANT, "content": "DDD"}]
-    ids, mask = chat.tokenize_conversation(tok, msgs, eos)
+    ids, mask, _ = chat.tokenize_conversation(tok, msgs, eos)
     trained = tok.decode([i for i, m in zip(ids, mask) if m])
     assert "User" not in trained and "Assistant" not in trained, trained
     assert "BBB" in trained and "DDD" in trained, trained

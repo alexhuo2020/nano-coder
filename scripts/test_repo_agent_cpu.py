@@ -309,6 +309,44 @@ def test_hard_tiers_cannot_be_solved_by_spotting_an_odd_token():
     print("test_hard_tiers_cannot_be_solved_by_spotting_an_odd_token: PASS")
 
 
+def test_every_assistant_turn_in_a_demo_carries_a_tool_call():
+    """No demo may contain a commentary-only assistant turn.
+
+    run_repo_episode ends the episode as soon as an assistant turn has no
+    parseable tool call, so a demo that answers a failing test with a bare
+    "let me fix that" teaches the policy to STOP at precisely the point the
+    demo exists to teach it to continue. This is invisible in the training
+    loss -- the tokens are perfectly predictable -- so it needs a test.
+    """
+    import random
+
+    from blackwell_lm import chat
+    from blackwell_lm.agent import parse_tool_call
+    from blackwell_lm.scenario import build_scenarios
+    from blackwell_lm.tasks import get_tasks
+    from blackwell_lm.tool_sft import (make_repo_retry_trajectory,
+                                       make_repo_trajectory)
+
+    scns = build_scenarios(get_tasks("easy"), seed=3, limit=3)
+    rng = random.Random(0)
+    checked = 0
+    for sc in scns:
+        for msgs in (make_repo_trajectory(sc),
+                     make_repo_retry_trajectory(sc, rng)):
+            if not msgs:
+                continue
+            checked += 1
+            assistant = [m for m in msgs if m["role"] == chat.ASSISTANT]
+            # every assistant turn but the LAST (the final answer) must call a tool
+            for m in assistant[:-1]:
+                assert parse_tool_call(m["content"]) is not None, (
+                    "commentary-only assistant turn would end the episode: "
+                    + m["content"][:80])
+    assert checked, "no trajectories were built, so nothing was checked"
+    print(f"test_every_assistant_turn_in_a_demo_carries_a_tool_call: PASS "
+          f"({checked} trajectories)")
+
+
 if __name__ == "__main__":
     test_system_prompt_is_generated_from_the_tool_declarations()
     test_scenario_breakage_is_verified_both_ways()
@@ -320,5 +358,6 @@ if __name__ == "__main__":
     test_repo_sft_trajectory_teaches_the_write_file_schema()
     test_verify_bonus_requires_a_genuine_verified_pass()
     test_hard_tiers_cannot_be_solved_by_spotting_an_odd_token()
+    test_every_assistant_turn_in_a_demo_carries_a_tool_call()
     test_run_repo_episode_terminates_and_cleans_up()
     print("All test_repo_agent_cpu tests passed.")

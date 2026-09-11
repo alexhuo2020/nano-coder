@@ -228,11 +228,24 @@ def make_repo_retry_trajectory(scenario, rng, tool_timeout: float = 10.0):
         msgs = [{"role": SYSTEM, "content": render_system_prompt()},
                 {"role": USER, "content": scenario.prompt}]
 
-        def turn(name, args):
+        def turn(name, args, prefix=""):
+            """`prefix` rides in the SAME assistant message as the tool call.
+
+            It must not be its own turn. run_repo_episode ends the episode the
+            moment an assistant turn contains no parseable tool call:
+
+                call = parse_tool_call(text)
+                if call is None: break
+
+            so a demo with a standalone "that did not pass, let me fix it"
+            message teaches the policy to answer a failing test with a comment
+            and stop -- terminating the episode at exactly the point this
+            trajectory exists to teach it to continue. parse_tool_call scans
+            for the fence anywhere in the text, so prose may precede it.
+            """
+            body = "```tool\n" + json.dumps({"name": name, "args": args}) + "\n```"
             msgs.append({"role": ASSISTANT,
-                         "content": "```tool\n"
-                                    + json.dumps({"name": name, "args": args})
-                                    + "\n```"})
+                         "content": (prefix + "\n" + body) if prefix else body})
             out, ok = tb.dispatch(name, args)
             msgs.append({"role": TOOL, "content": out})
             return out, ok
@@ -255,11 +268,11 @@ def make_repo_retry_trajectory(scenario, rng, tool_timeout: float = 10.0):
         if out.startswith(full):
             return None          # the "wrong" attempt passed: no failure to learn from
 
-        # Now the recovery, which is the behaviour being taught.
-        msgs.append({"role": ASSISTANT,
-                     "content": "That did not pass. Let me correct it."})
-        _, ok = turn("write_file", {"path": "solution.py",
-                                    "content": scenario.reference})
+        # The recovery, which is the behaviour being taught. The commentary
+        # rides along with the call rather than forming a turn of its own.
+        _, ok = turn("write_file",
+                     {"path": "solution.py", "content": scenario.reference},
+                     prefix="That did not pass. Let me correct it.")
         if not ok:
             return None
         out, _ = turn("run_tests", {})

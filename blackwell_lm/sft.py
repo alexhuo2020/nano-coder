@@ -24,7 +24,8 @@ from typing import Iterator, List
 
 import numpy as np
 
-from blackwell_lm.chat import ASSISTANT, DEFAULT_SYSTEM, SYSTEM, USER, tokenize_conversation
+from blackwell_lm.chat import (ASSISTANT, DEFAULT_SYSTEM, SYSTEM, TOOL, USER,
+                                tokenize_conversation)
 
 
 @dataclass
@@ -144,9 +145,26 @@ def sft_batches(msg_stream: Iterator[list], tok, eos_id: int, batch_size: int,
     import torch
 
     pending = []
+    n_dropped_trunc = 0
     for msgs in msg_stream:
-        ids, mask = tokenize_conversation(tok, msgs, eos_id, max_len=max_len + 1)
+        ids, mask, truncated = tokenize_conversation(tok, msgs, eos_id,
+                                                     max_len=max_len + 1)
         if sum(mask[1:]) < min_trainable:
+            continue
+        # A TRUNCATED TOOL TRAJECTORY IS WORSE THAN NO TRAJECTORY. Truncation
+        # keeps the head, so a retry demo (wrong fix -> failing tests ->
+        # correct fix) that overruns max_len keeps the WRONG fix, still has
+        # ample trainable tokens, and teaches the model to write a bad edit
+        # and stop -- the exact behaviour these demos exist to remove. A
+        # single long instruction answer is unaffected: head-truncating prose
+        # is harmless, so only conversations containing a TOOL turn are
+        # dropped.
+        if truncated and any(m.get("role") == TOOL for m in msgs):
+            n_dropped_trunc += 1
+            if n_dropped_trunc in (1, 10, 100, 1000):
+                print(f"[sft] dropped {n_dropped_trunc} tool trajectories that "
+                      f"exceeded max_len ({max_len}); raise --max-len if this "
+                      f"grows", flush=True)
             continue
         pending.append((ids, mask))
         if len(pending) < batch_size:

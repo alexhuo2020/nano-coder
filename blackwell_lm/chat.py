@@ -94,9 +94,15 @@ def tokenize_conversation(tok, messages, eos_id: int, max_len: int | None = None
         if m["role"] == ASSISTANT:
             ids.append(eos_id)
             mask.append(1)
-    if max_len is not None and len(ids) > max_len:
+    truncated = max_len is not None and len(ids) > max_len
+    if truncated:
         ids, mask = ids[:max_len], mask[:max_len]
-    return ids, mask
+    # `truncated` is reported because head-truncation is SAFE for a single
+    # long answer and UNSAFE for a multi-turn tool trajectory: the tail is
+    # where the outcome lives. A retry demo (wrong fix -> failing tests ->
+    # correct fix) cut short keeps the wrong fix, still has plenty of
+    # trainable tokens, and teaches the model to write a bad edit and stop.
+    return ids, mask, truncated
 
 
 def tokenize_prompt(tok, messages) -> list[int]:

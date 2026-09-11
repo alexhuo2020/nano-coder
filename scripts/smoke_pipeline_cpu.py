@@ -46,7 +46,8 @@ def stage_sft(tok, cfg, model):
     eos = tok.token_to_id(EOS)
     msgs = chat.user_turn("Write a function add(a, b).") + [
         {"role": chat.ASSISTANT, "content": "```python\ndef add(a, b):\n    return a + b\n```"}]
-    ids, mask = chat.tokenize_conversation(tok, msgs, eos, max_len=cfg.max_seq_len - 1)
+    ids, mask, _ = chat.tokenize_conversation(tok, msgs, eos,
+                                              max_len=cfg.max_seq_len - 1)
     t = torch.tensor(ids)[None]
     m = torch.tensor(mask, dtype=torch.float32)[None]
     inp, tgt, msk = t[:, :-1], t[:, 1:], m[:, 1:]

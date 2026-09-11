@@ -44,6 +44,19 @@ def main():
     ap.add_argument("--samples", type=int, default=6)
     ap.add_argument("--max-turns", type=int, default=6)
     ap.add_argument("--task-set", default="mbpp")
+    ap.add_argument("--n-loops", type=int, default=None,
+                    help="override the loop count at inference (weight-shared "
+                         "depth). The depth ablation minimised held-out LOSS "
+                         "at the trained 8, but loss and task success are "
+                         "different objectives and extra depth on a hard "
+                         "prompt was advertised as free -- never tested "
+                         "against a task metric.")
+    ap.add_argument("--temperature", type=float, default=1.0,
+                    help="1.0 is the RL rollout setting, correct for "
+                         "exploration and not necessarily for SOLVING. Lower "
+                         "temperature usually raises pass@1 and lowers pass@k; "
+                         "neither the 1.0 here nor the 0.7 the server used was "
+                         "ever chosen by measurement.")
     a = ap.parse_args()
 
     tok = load_tokenizer(a.tokenizer)
@@ -55,13 +68,17 @@ def main():
                         dtype=torch.bfloat16)
     load_stage_checkpoint(a.ckpt, model)
     model.eval()
+    # A bigger loop count needs the RoPE table and mask built for it; the
+    # buffer is non-persistent so this only costs its construction.
+    n_loops = a.n_loops or cfg.n_loops
 
     tasks = get_tasks(a.task_set)
     name = os.path.basename(a.ckpt)
     n = a.tasks * a.samples
     print()
     print(f"=== {name}  {a.tasks} tasks x {a.samples} samples = {n} episodes "
-          f"per tier ===")
+          f"per tier  (T={a.temperature}, loops={n_loops}, "
+          f"max_turns={a.max_turns}) ===")
     print(f"{'tier':8} {'pass@1':>12} {'pass@k':>8} {'partial':>9} "
           f"{'wrote':>7} {'verified':>9} {'turns':>6}")
 
@@ -79,7 +96,8 @@ def main():
             for _ in range(a.samples):
                 ep = run_repo_episode(model, tok, sc, eos,
                                       max_turns=a.max_turns,
-                                      max_new_tokens=256, n_loops=cfg.n_loops,
+                                      max_new_tokens=256, n_loops=n_loops,
+                                      temperature=a.temperature,
                                       keep_repo=True)
                 tot += 1
                 turns_sum += ep.turns
