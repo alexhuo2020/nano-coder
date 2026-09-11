@@ -27,19 +27,39 @@ real repositories.
 > disk.** Details in [the hardness audit](#the-70-solve-rate-on-these-repos-was-an-artifact-measured)
 > below and §6 of the report.
 >
-> **Then that retraction was itself half wrong.** The 0/120 was blamed on an
-> 85M "capability ceiling". It was not: `train_sft.py` defaulted to building
-> repo demos on the `mutate` tier, so every demonstration taught *write the
-> file back with one token changed* - and that is what the model learned
-> (236/240 echoed the stub verbatim). Rebuilding the demos on `stub`, where the
-> demonstration writes the whole body, took **pass@1 from 0% to 9.6% and
-> pass@12 from 0% to 40% in 11 minutes of SFT.**
+> **Then that retraction was itself half wrong, and so was the number that
+> replaced it.** The 0/120 was blamed on an 85M "capability ceiling". The
+> immediate cause was narrower: `train_sft.py` defaulted to the `mutate` tier,
+> so every demonstration taught *write the file back with one token changed*,
+> and 236/240 episodes echoed the stub verbatim. Rebuilding the demos on `stub`
+> appeared to take pass@1 from 0% to 9.6%.
 >
-> The load-bearing conclusion is therefore about method, not capacity: **check
-> what your demonstrations actually demonstrate before declaring a capability
-> limit.** A flattering benchmark made the model look better than it was; a
-> flattering training set made it *worse* than it was. Same hidden parameter,
-> opposite directions, and I missed the second one while writing up the first.
+> **But that 9.6% was train accuracy.** Training built scenarios from all 374
+> MBPP tasks and the eval drew its tasks from the same pool. With a real 300/74
+> split, on tasks never seen in training:
+>
+> | tier | held-out pass@1 |
+> |---|---|
+> | `mutate` one token | **56.7% ±4.5** |
+> | `multi` two tokens | **55.8% ±4.5** |
+> | `stub` write the body | **0.0%** (7.5% if trained for it, at a cost) |
+> | `swap` wrong function | **0.0%** (5.0% if trained for it, at a cost) |
+>
+> The same model scores **78.5% mean on tasks it trained on** and **28.1% on
+> unseen ones**. Most of the headline was memorisation of 300 reference
+> solutions.
+>
+> **The one unambiguous win was sampling temperature**, worth more than any
+> training change here: on held-out single-turn MBPP, pass@1 goes **1.0% → 6.4%
+> (6.4×)** moving T from 1.0 to 0.2, and +24pp across agentic tiers. Every
+> earlier figure in this project was measured at T=1.0 because that is the RL
+> rollout default — correct for *exploration*, wrong for *solving*.
+>
+> The load-bearing lesson is about method, not capacity. Four times an
+> unexamined default silently produced the result and got credited to the
+> model: the benchmark tier, the training tier, the sampling temperature, and
+> the train/test split. **Split your tasks and sweep your sampling before you
+> believe anything.**
 
 ## Target vs achieved
 
@@ -54,7 +74,7 @@ numbers happened.
 | Pretrain | ~37B tokens in 3 days (289 tok/param) | **20.40B tokens** (240 tok/param), held-out CE **2.1155** |
 | Throughput | - | 45,146 tok/s (PRO 4500); **119,807 tok/s** (PRO 6000, tuned) |
 | Full loop | ~82 hours, ~$118 at $1.43/hr spot | ~4 days, **~$180** incl. all post-training and probes |
-| Goal | output that reads as acceptable English/code; wrong often, not word salad | **met.** Writes correct functions from a bare stub in 9.6% of samples (40% pass@12) once the demos teach that task |
+| Goal | output that reads as acceptable English/code; wrong often, not word salad | **met.** On HELD-OUT tasks: repairs token-level breakage 56.7%, writes a function body 0-7.5%, single-turn MBPP 6.4% |
 
 ## What the hardware actually rewards
 
