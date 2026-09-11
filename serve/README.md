@@ -51,6 +51,7 @@ On the GPU box (the checkpoint and tokenizer live beside it):
 cd /home/ubuntu/bnano
 PYTHONPATH=. python3 anthropic_shim.py \
   --ckpt sft_ctl.pt \
+  --cwd 'C:\path\to\your\repo' \
   --context 32768 \
   --claude-code \
   --truncate \
@@ -62,6 +63,14 @@ the same checkpoint scores 24 points lower on every tier (see the table in
 `anthropic_shim.py`). `--context 32768` is free on this architecture — RoPE is
 a non-persistent buffer and every attention application is a 1,024-token
 sliding window, so no relative offset beyond 1,024 ever occurs.
+
+**`--cwd` is not optional when the CLI runs on another machine.** It is the
+CLIENT's repository directory, and the server cannot infer it. Without it the
+fallback is the *server's* working directory, so Claude Code is handed
+`/home/ubuntu/bnano/solution.py` on a Windows client: every tool call reports
+success against a file that is not yours, the real one is never touched, and
+the tests keep failing. That failure mode reads exactly like "the model keeps
+writing the file back unchanged", which cost hours to see through.
 
 If the CLI runs on a different machine, tunnel the port:
 
