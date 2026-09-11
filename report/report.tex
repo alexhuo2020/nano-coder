@@ -38,10 +38,10 @@
 
 \title{\vspace{-1.2cm}\textbf{\color{ink}blackwell-nanogpt}\\[2pt]
 \large An 85M-parameter language model trained end to end on consumer Blackwell
-hardware:\\ pretraining, SFT, GRPO, and agentic tool-use RL --- with the
-result that did not hold up}
+hardware:\\ pretraining, SFT, GRPO, and agentic tool-use RL --- and the four
+defaults that produced its results}
 \author{Alex Huo \quad\small\texttt{(with Claude Code)}}
-\date{10 September 2026}
+\date{11 September 2026}
 
 \begin{document}
 \maketitle
@@ -69,23 +69,34 @@ $0/240$ samples with \emph{any} partial credit, and that in $236$ of $240$
 episodes the model wrote the unchanged stub back to disk.
 
 \medskip\noindent
-Second, the diagnosis of \emph{that} failure was also wrong. It was attributed
-to a code-generation capability ceiling at 85M, with the conclusion that teacher
-distillation could not help. The real cause was a defaulted argument in this
-project's own SFT script: every repository demonstration had been built on the
-single-token-mutation tier, so the policy had been taught to copy a file back
-with one token changed --- which is precisely what it did. Rebuilding the
-demonstrations on the \code{stub} tier and re-running SFT for $11$ minutes took
-$\mathrm{pass@}1$ from $\mathbf{0\%}$ to $\mathbf{9.6\% \pm 1.9}$ and
-$\mathrm{pass@}12$ from $\mathbf{0\%}$ to $\mathbf{40\%}$, with the model
-writing correct function bodies from bare stubs.
+Second, the diagnosis of \emph{that} failure was wrong too. It was attributed to
+a capability ceiling; the immediate cause was a defaulted argument, with every
+repository demonstration built on the single-token-mutation tier, so the policy
+had been taught to copy a file back with one token changed. Rebuilding the
+demonstrations appeared to fix it.
 
 \medskip\noindent
-The conclusion is therefore about method rather than capacity. A benchmark's
-difficulty and a training set's difficulty are the same hidden parameter: the
-flattering benchmark made the model look better than it was, and the flattering
-training set made it look worse. Both were defaults chosen for convenience, and
-both silently became definitions.
+Third --- and this supersedes both --- \emph{that} number was train accuracy.
+Training built scenarios from all $374$ MBPP tasks while the evaluation drew
+from the same pool. On a real $300/74$ split the same model scores $\mathbf{23.5\%}$
+mean against $78.5\%$ on tasks it trained on, and $\code{stub}$ falls from
+$87.5\%$ to $7.5\%$: it had memorised $300$ reference solutions. Against a
+control trained under identical conditions, the four-tier intervention is a net
+\emph{loss} ($28.1\% \rightarrow 23.5\%$), because at 85M task-shape priors
+compete for capacity.
+
+\medskip\noindent
+The one unambiguous win was not a training change at all. Sampling temperature,
+inherited from the RL rollouts at $T{=}1.0$, was understating the model roughly
+six-fold: on held-out single-turn MBPP, $\mathrm{pass@}1$ goes
+$1.0\% \rightarrow \mathbf{6.4\%}$ at $T{=}0.2$, and ${+}24$ points across the
+agentic tiers.
+
+\medskip\noindent
+Four times an unexamined default produced the result and was credited to the
+model --- the benchmark tier, the training tier, the sampling temperature, and
+the absent train/test split. That, rather than any individual metric, is this
+report's finding.
 \end{abstract}
 
 \vspace{-0.3cm}
@@ -106,7 +117,9 @@ Tokenizer + data & 32{,}784-token BPE, 20.4B-token corpus & --- \\
 4. Agentic RL (repo) & \emph{apparent} solve $42.5\% \rightarrow 50.9\%$ / $62.5\%$ & \textbf{\color{acc}retracted} \\
 5. Hardness audit & $0/120$ solved on honest breakage tiers & --- \\
 6. Cause found & demos were built on the easy tier, not a capacity limit & --- \\
-7. SFT on \code{stub} demos & $\mathrm{pass@}1$ $0\% \rightarrow 9.6\%$; $\mathrm{pass@}12$ $0\% \rightarrow 40\%$ & \YES \\
+7. SFT on \code{stub} demos & appeared to give $\mathrm{pass@}1$ $0\% \rightarrow 9.6\%$ & \textbf{\color{acc}train acc.} \\
+8. Held-out split (300/74) & true profile: $56.7\%$ token repair, $0\%$ writing a body & \YES \\
+9. Temperature $1.0 \rightarrow 0.2$ & MBPP $\mathrm{pass@}1$ $1.0\% \rightarrow 6.4\%$, free & \YES \\
 \bottomrule
 \end{tabular}
 \caption{Every stage ran, and every stage moved its metric. Stage~4's repository
@@ -470,89 +483,127 @@ because a refactor that quietly reintroduced a hint would make the benchmark
 flattering again, and the number would look like progress.
 \end{finding}
 
-\section{The capability ceiling that was not one}
-\label{sec:notaceiling}
+\section{The result that only a held-out split could show}
+\label{sec:heldout}
 
 Section~\ref{sec:hardness} concluded that the $0/120$ reflected a
-code-generation \emph{capability} limit at 85M, and that teacher distillation
-therefore could not help. That conclusion was wrong, and the cause was a
-defaulted argument in this repository's own SFT script:
+code-generation capability limit at 85M. That was traced to a defaulted
+argument: \code{train\_sft.py} built every repository demonstration on the
+single-token-mutation tier, so the policy had been taught to write a file back
+with one token changed, which is exactly what it did ($236/240$ episodes wrote
+the unchanged stub back). Rebuilding the demonstrations on the \code{stub} tier
+appeared to take $\mathrm{pass@}1$ from $0\%$ to $9.6\%$.
 
-\begin{center}
-\code{scns = build\_scenarios(base\_tasks, seed=1)}\quad\emph{--- difficulty
-defaults to \code{"mutate"}}
-\end{center}
+\begin{retraction}{That $9.6\%$ was train accuracy, and so was everything after it}
+Training built scenarios from all $374$ MBPP tasks; the scoreboard drew its $20$
+from the same pool. Every ``benchmark'' number in this project was therefore
+measured on tasks the model had trained on. Nobody had to do anything wrong for
+this to happen --- the evaluation harness defaulted to the same task list the
+demonstrations were built from, so contamination was the path of least
+resistance.
+\end{retraction}
 
-Every repository demonstration the policy had ever seen was a single-token
-mutation, where the correct fix is \emph{write the file back with one token
-changed}. So that is what it learned, and the probe caught it precisely: in
-$236$ of $240$ episodes it wrote the \emph{unchanged stub} back to disk. It had
-mastered copying, not coding. The $93$--$98\%$ ``wrote a file'' rate was
-measuring a copy.
-
-Adding \code{--tool-difficulty} and rebuilding the demonstrations on the
-\code{stub} tier --- where the demonstration writes the \textbf{whole reference
-body} --- then re-running SFT for $1{,}500$ steps ($11$ minutes, one GPU):
+\noindent With a real split (300 train, 74 held-out, tasks $901$--$974$) and the
+tuned sampling temperature, the same model scores:
 
 \begin{table}[h]
 \centering\small
 \begin{tabular}{@{}lrr@{}}
 \toprule
-\textbf{\code{stub} tier, 240 episodes} & \textbf{mutate-trained demos} & \textbf{stub-trained demos} \\
+\textbf{tier} & \textbf{train tasks} & \textbf{HELD-OUT tasks} \\
 \midrule
-$\mathrm{pass@}1$          & $0.0\%$ \;(0/240)       & $\mathbf{9.6\% \pm 1.9}$ \;(23/240) \\
-$\mathrm{pass@}12$         & $0.0\%$ \;(0/20 tasks)  & $\mathbf{40.0\%}$ \;(8/20 tasks) \\
-any partial credit         & $0.0\%$                 & $\mathbf{11.2\%}$ \\
-left the stub unchanged    & $\mathbf{236/240}$      & $99/240$ \\
-wrote valid Python         & $1/240$                 & $\mathbf{92/240}$ \\
+\code{mutate} & $95.0\% \pm 2.0$ & $40.8\% \pm 4.5$ \\
+\code{multi}  & $95.0\% \pm 2.0$ & $40.8\% \pm 4.5$ \\
+\code{stub}   & $87.5\% \pm 3.0$ & $7.5\% \pm 2.4$ \\
+\code{swap}   & $36.7\% \pm 4.4$ & $5.0\% \pm 2.0$ \\
+\midrule
+mean & $78.5\%$ & $\mathbf{23.5\%}$ \\
 \bottomrule
 \end{tabular}
-\caption{The same checkpoint lineage, the same tasks, the same probe. The only
-change is which tier the \emph{demonstrations} were built on.}
+\caption{\code{stub} falls from $87.5\%$ to $7.5\%$. The model had memorised
+300 reference solutions rather than learned to write function bodies.}
 \end{table}
 
-\noindent Correct code, written from a bare stub, reward $1.00$:
+\subsection{The intervention was a net loss, and a contaminated control hid it}
 
-\begin{center}
-\begin{minipage}{0.62\textwidth}
-\small
-\begin{verbatim}
-def max_of_nth(test_list, N):
-  res = max([sub[N] for sub in test_list])
-  return (res)
-\end{verbatim}
-\end{minipage}
-\end{center}
+A first comparison used \code{sft\_repo\_heavy}, which scored $73.3\%$ on the
+held-out tasks --- but that checkpoint predates the split and had trained on
+them. \textbf{A control trained without the same holdout is not a control}, and
+it took a second look to notice, because it looked like one.
 
-\begin{retraction}{The method lesson, learned twice in one day, in opposite directions}
-A benchmark's difficulty and a training set's difficulty are the same hidden
-parameter, and an unexamined parameter is an assumption either way. The
-flattering \emph{benchmark} made the model look better than it was
-($70\% \rightarrow 0\%$). The flattering \emph{training set} made it look worse
-than it was ($0\% \rightarrow 9.6\%$). Both were defaults chosen because they
-were the easiest thing to implement, and both silently became definitions ---
-of the task, and then of the model's ceiling.
+With a control trained under identical conditions (same 300/74 split,
+mutate-only demonstrations), both evaluated on the same 74 unseen tasks at
+$T{=}0.2$:
 
-The operational rule: \textbf{before declaring a capability limit, print one
-demonstration and read it.} Had that been done once, the second error would not
-have happened -- and it was made while writing up the first.
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{tier} & \textbf{\code{sft\_ctl}} (mutate only) & \textbf{\code{sft\_ho}} (4 tiers $+$ retry) \\
+\midrule
+\code{mutate} & $\mathbf{56.7\% \pm 4.5}$ & $40.8\% \pm 4.5$ \\
+\code{multi}  & $\mathbf{55.8\% \pm 4.5}$ & $40.8\% \pm 4.5$ \\
+\code{stub}   & $0.0\% \pm 0.0$ & $\mathbf{7.5\% \pm 2.4}$ \\
+\code{swap}   & $0.0\% \pm 0.0$ & $\mathbf{5.0\% \pm 2.0}$ \\
+\midrule
+mean & $\mathbf{28.1\%}$ & $23.5\%$ \\
+\bottomrule
+\end{tabular}
+\caption{Training on all four tiers plus retry demonstrations lifts the two
+hard tiers off zero and costs ${\sim}16$ points on each easy one: a net
+$-4.6$.}
+\end{table}
+
+\begin{finding}{At 85M, task-shape priors compete for capacity}
+Four of them do not fit. Teaching \code{stub} partly evicts \code{mutate}. The
+train-set numbers hid this completely --- there the model held all four tiers
+at once ($78.5\%$ mean), because it had \emph{memorised} the solutions, and
+memorisation does not trade off the way a learned prior does.
+\end{finding}
+
+\section{Sampling temperature was worth more than any training change}
+
+Every agentic number in this project had been measured at $T{=}1.0$, because
+that is what the RL rollouts use. $T{=}1.0$ is correct for \emph{exploration} ---
+it is what gives GRPO its reward variance --- and wrong for \emph{solving}.
+Same checkpoint, no retraining, same 74 held-out tasks, 296 single-turn MBPP
+samples:
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+& $\mathrm{pass@}1$ & $\mathrm{pass@}4$ & emitted a code block \\
+\midrule
+$T=1.0$ & $1.0\% \pm 0.6$ & $2.7\%$ & $97.6\%$ \\
+$T=0.2$ & $\mathbf{6.4\% \pm 1.4}$ & $\mathbf{10.8\%}$ & $100\%$ \\
+\bottomrule
+\end{tabular}
+\caption{$6.4\times$ from one sampling parameter. On the agentic tiers the same
+change is worth ${+}24$ points.}
+\end{table}
+
+\noindent This settles the \emph{9/300 = 3\%, it cannot write code} headline:
+that figure was a $T{=}1.0$ artifact understating the model roughly six-fold. It
+is still a weak coder --- $6.4\%$ is not a good score --- but $1\%$ and $6.4\%$
+support very different conclusions, and a narrative was built on the former.
+The ``still-a-stub'' echo failure also fell from $48/120$ to $11/120$ at
+$T{=}0.2$, so part of what was diagnosed as a learned copying prior was a
+sampling artifact.
+
+\begin{retraction}{The actual finding of this project}
+Four times, an unexamined default produced the result and was credited to the
+model:
+\begin{enumerate}
+\item the \textbf{benchmark tier} --- \code{mutate} made it look capable ($70\%$);
+\item the \textbf{training tier} --- \code{mutate} demos made it look incapable ($0/240$);
+\item the \textbf{sampling temperature} --- $T{=}1.0$ understated it ${\sim}6\times$;
+\item the \textbf{train/test split} --- its absence inflated every number ($78.5\%$ vs $23.5\%$).
+\end{enumerate}
+Each was chosen because it was the path of least resistance, and each silently
+became a definition. Split the tasks and sweep the sampling before believing
+anything.
 \end{retraction}
-
-\noindent Two revisions follow for the earlier claims.
-
-\medskip\noindent\textbf{``RL cannot bootstrap a convention the policy never
-emits'' survives, with a sharper statement.} It is not enough to add
-demonstrations; they must demonstrate \emph{the target behaviour}. Demos of an
-adjacent, easier task actively train the wrong skill, which is what happened
-here. And $\mathrm{pass@}12 = 40\%$ supplies exactly the precondition RL was
-missing: groups now carry reward spread instead of being dropped as
-zero-variance.
-
-\medskip\noindent\textbf{Teacher distillation is no longer ruled out on
-capability grounds} --- better demonstrations demonstrably move this model.
-It remains not built here for a separate and unchanged reason: using a Claude
-subscription to generate training data for a different model is a restricted use
-under Anthropic's terms. That was flagged when the idea was first raised.
 
 \section{Driving a coding CLI with this model}
 
@@ -644,17 +695,15 @@ MCP-shaped tools, verified scenarios across four difficulty tiers, a
 harness-owned grader, and durable metrics. That was the project's stated goal:
 prove the pipeline, then point it at a real base model.
 
-\medskip\noindent\textbf{The ceiling I reported was my own training data.}
-An 85M model at $240$ tokens/param learns the agentic \emph{tool workflow}
-convincingly --- $93$--$98\%$ write rate, $86\%$ self-verification, $0.07\%$
-malformed calls. I then reported that it \emph{cannot} learn to write code
-($0/240$ from a stub) and called that a capacity limit. It was not: the
-demonstrations had taught copying. With demonstrations of the actual target it
-writes correct bodies from bare stubs at $9.6\%$ $\mathrm{pass@}1$ and $40\%$
-$\mathrm{pass@}12$. The honest remaining limit is that $9.6\%$ is low, not that
-it is zero --- and the difference between those two claims is the whole
-difference between ``this scale cannot do it'' and ``this run had not taught
-it''.
+\medskip\noindent\textbf{What the model can actually do, on tasks it has never
+seen.} It repairs token-level breakage in a real repository $56.7\% \pm 4.5$ of
+the time, reading the file, editing it, and verifying with the tests. It writes
+a function body from nothing essentially never ($0\%$; $7.5\%$ if trained
+specifically for it, at the cost of 16 points on everyday repair). Unaided
+single-turn code generation is $6.4\% \pm 1.4$. The agentic \emph{workflow} is
+solid --- $90$--$98\%$ write rate, near-zero malformed calls --- and the coding
+is weak. Those remain separable, and the workflow is the half that this scale
+supports.
 
 \medskip\noindent\textbf{Recommended next steps.} Two, in order.
 \emph{(i)} Train on \code{stub}/\code{swap} rather than \code{mutate}
