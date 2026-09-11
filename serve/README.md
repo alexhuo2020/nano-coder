@@ -4,6 +4,33 @@ Drives **Claude Code** or **Codex CLI** with the local 85M checkpoint. No
 Anthropic or OpenAI model is involved at any point — the only weights are the
 ones in this repo's checkpoint.
 
+## Which checkpoint, and what it scores
+
+Use **`sft_ctl.pt`**. Measured on 74 tasks never seen in training, T=0.2,
+120 episodes per tier:
+
+| tier | what is broken | `sft_ctl` | `sft_ho` |
+|------|----------------|-----------|----------|
+| `mutate` | one token (`+` -> `-`) | **56.7% ±4.5** | 40.8% ±4.5 |
+| `multi` | two tokens | **55.8% ±4.5** | 40.8% ±4.5 |
+| `stub` | body replaced by `pass` | 0.0% | **7.5% ±2.4** |
+| `swap` | a different function entirely | 0.0% | **5.0% ±2.0** |
+| mean | | **28.1%** | 23.5% |
+
+`sft_ho` was trained on all four tiers plus retry demos and is **worse
+overall**: it buys 7.5% and 5.0% on the two hard tiers by giving up ~16 points
+on each easy one. At 85M, task-shape priors compete for capacity — four of them
+do not fit, and teaching `stub` partly evicts `mutate`. Since real breakage is
+far more often a wrong operator than a deleted function body, `sft_ctl` is the
+better default. Switch to `sft_ho` only if you specifically need non-zero
+`stub`/`swap`.
+
+Single-turn code generation (no repo, no tools, held-out): **6.4% ±1.4**
+pass@1, 10.8% pass@4. A weak coder in absolute terms.
+
+Every number above is on HELD-OUT tasks. On tasks it trained on the same model
+scores 78.5% mean — that gap is memorisation, and it is why the split exists.
+
 ## What it is actually good at
 
 One task shape, the one it was trained on:
@@ -23,7 +50,7 @@ On the GPU box (the checkpoint and tokenizer live beside it):
 ```bash
 cd /home/ubuntu/bnano
 PYTHONPATH=. python3 anthropic_shim.py \
-  --ckpt sft_ho.pt \
+  --ckpt sft_ctl.pt \
   --context 32768 \
   --claude-code \
   --truncate \
