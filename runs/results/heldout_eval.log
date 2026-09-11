@@ -1,0 +1,165 @@
+W0911 13:07:56.355000 71521 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:07:56.355000 71521 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:07:56.357000 71521 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:07:56.358000 71521 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:07:56.358000 71521 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:07:56.358000 71521 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:07:56.358000 71521 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:07:56.359000 71521 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:07:56.424000 71521 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:07:56.424000 71521 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:07:56.424000 71521 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:07:56.425000 71521 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:07:56.425000 71521 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:07:56.425000 71521 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[scoreboard] HELD-OUT split: 74 tasks (901..974), none of them seen in training
+
+=== sft_ho.pt  20 tasks x 6 samples = 120 episodes per tier  (T=0.2, loops=8, max_turns=6) ===
+tier           pass@1   pass@k   partial   wrote  verified  turns
+[scenario] built 20 verified repo scenarios [difficulty=mutate] (rejected: 0 no reference, 0 reference fails its own tests, 0 no breakage worked)
+W0911 13:08:16.012000 71521 torch/_dynamo/convert_frame.py:2008] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0911 13:08:16.012000 71521 torch/_dynamo/convert_frame.py:2008] [0/8]    function: 'flex_attention' (/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2365)
+W0911 13:08:16.012000 71521 torch/_dynamo/convert_frame.py:2008] [0/8]    last reason: 0/7: tensor 'key' size mismatch at index 2. expected 566, actual 724
+W0911 13:08:16.012000 71521 torch/_dynamo/convert_frame.py:2008] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0911 13:08:16.012000 71521 torch/_dynamo/convert_frame.py:2008] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2596: UserWarning: flex_attention called without torch.compile() - this will use an unfused implementation that materializes the full scores matrix instead of generating a fused kernel.
+
+SOLUTION: Use torch.compile(flex_attention)(...)
+
+If you want to debug your score_mod/mask_mod, you can set:
+torch.nn.attention.flex_attention._FLEX_ATTENTION_DISABLE_COMPILE_DEBUG = True
+
+This will allow you to use print statements or breakpoints. Note: This doesn't work with the backwards pass and may produce incorrect results.
+  _warn_once(
+mutate      40.8% +-4.5      50%     46.7%     94%       41%   5.77   {'syntax-error': 12, 'valid-python': 108}
+[scenario] built 20 verified repo scenarios [difficulty=multi] (rejected: 0 no reference, 0 reference fails its own tests, 3 no breakage worked)
+multi       40.8% +-4.5      50%     55.0%     94%       41%   5.77   {'valid-python': 107, 'syntax-error': 13}
+[scenario] built 20 verified repo scenarios [difficulty=stub] (rejected: 0 no reference, 0 reference fails its own tests, 0 no breakage worked)
+stub         7.5% +-2.4      10%     20.8%     85%        8%   5.37   {'valid-python': 90, 'still-a-stub': 18, 'syntax-error': 12}
+[scenario] built 20 verified repo scenarios [difficulty=swap] (rejected: 0 no reference, 0 reference fails its own tests, 0 no breakage worked)
+swap         5.0% +-2.0       5%      5.8%     79%        5%   5.15   {'valid-python': 105, 'syntax-error': 15}
+
+mean pass@1 across tiers: 23.5%   (the number a single-tier run cannot tell you)
+W0911 13:25:06.793000 73722 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:25:06.793000 73722 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:25:06.796000 73722 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:25:06.796000 73722 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:25:06.796000 73722 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:25:06.797000 73722 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:25:06.797000 73722 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:25:06.797000 73722 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:25:06.861000 73722 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:25:06.862000 73722 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:25:06.862000 73722 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:25:06.862000 73722 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:25:06.862000 73722 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:25:06.862000 73722 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[scoreboard] HELD-OUT split: 74 tasks (901..974), none of them seen in training
+
+=== sft_repo_heavy.pt  20 tasks x 6 samples = 120 episodes per tier  (T=0.2, loops=8, max_turns=6) ===
+tier           pass@1   pass@k   partial   wrote  verified  turns
+[scenario] built 20 verified repo scenarios [difficulty=mutate] (rejected: 0 no reference, 0 reference fails its own tests, 0 no breakage worked)
+W0911 13:25:28.012000 73722 torch/_dynamo/convert_frame.py:2008] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0911 13:25:28.012000 73722 torch/_dynamo/convert_frame.py:2008] [0/8]    function: 'flex_attention' (/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2365)
+W0911 13:25:28.012000 73722 torch/_dynamo/convert_frame.py:2008] [0/8]    last reason: 0/7: tensor 'key' size mismatch at index 2. expected 317, actual 402
+W0911 13:25:28.012000 73722 torch/_dynamo/convert_frame.py:2008] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0911 13:25:28.012000 73722 torch/_dynamo/convert_frame.py:2008] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2596: UserWarning: flex_attention called without torch.compile() - this will use an unfused implementation that materializes the full scores matrix instead of generating a fused kernel.
+
+SOLUTION: Use torch.compile(flex_attention)(...)
+
+If you want to debug your score_mod/mask_mod, you can set:
+torch.nn.attention.flex_attention._FLEX_ATTENTION_DISABLE_COMPILE_DEBUG = True
+
+This will allow you to use print statements or breakpoints. Note: This doesn't work with the backwards pass and may produce incorrect results.
+  _warn_once(
+mutate      73.3% +-4.0      75%     78.3%     95%       73%   5.80   {'valid-python': 119, 'syntax-error': 1}
+[scenario] built 20 verified repo scenarios [difficulty=multi] (rejected: 0 no reference, 0 reference fails its own tests, 3 no breakage worked)
+multi       70.0% +-4.2      70%     75.0%     95%       70%   5.80   {'valid-python': 120}
+[scenario] built 20 verified repo scenarios [difficulty=stub] (rejected: 0 no reference, 0 reference fails its own tests, 0 no breakage worked)
+stub         0.0% +-0.0       0%      0.0%    100%        0%   6.00   {'still-a-stub': 120}
+[scenario] built 20 verified repo scenarios [difficulty=swap] (rejected: 0 no reference, 0 reference fails its own tests, 0 no breakage worked)
+swap         0.0% +-0.0       0%      0.0%     90%        0%   5.60   {'valid-python': 120}
+
+mean pass@1 across tiers: 35.8%   (the number a single-tier run cannot tell you)
+W0911 13:36:04.980000 75462 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:36:04.981000 75462 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:36:04.983000 75462 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:36:04.983000 75462 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:36:04.983000 75462 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:36:04.984000 75462 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:36:04.984000 75462 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:36:04.984000 75462 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:36:05.047000 75462 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:36:05.048000 75462 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:36:05.048000 75462 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:36:05.048000 75462 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:36:05.048000 75462 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:36:05.048000 75462 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+W0911 13:36:31.275000 75462 torch/_dynamo/convert_frame.py:2008] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0911 13:36:31.275000 75462 torch/_dynamo/convert_frame.py:2008] [0/8]    function: 'flex_attention' (/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2365)
+W0911 13:36:31.275000 75462 torch/_dynamo/convert_frame.py:2008] [0/8]    last reason: 0/7: tensor 'key' size mismatch at index 2. expected 66, actual 65
+W0911 13:36:31.275000 75462 torch/_dynamo/convert_frame.py:2008] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0911 13:36:31.275000 75462 torch/_dynamo/convert_frame.py:2008] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2596: UserWarning: flex_attention called without torch.compile() - this will use an unfused implementation that materializes the full scores matrix instead of generating a fused kernel.
+
+SOLUTION: Use torch.compile(flex_attention)(...)
+
+If you want to debug your score_mod/mask_mod, you can set:
+torch.nn.attention.flex_attention._FLEX_ATTENTION_DISABLE_COMPILE_DEBUG = True
+
+This will allow you to use print statements or breakpoints. Note: This doesn't work with the backwards pass and may produce incorrect results.
+  _warn_once(
+
+=== sft_ho.pt  single-turn MBPP  74 tasks x 4 samples = 296 samples  (T=0.2, HELD-OUT) ===
+  emitted a code block : 100.0%
+  pass@1               :   6.4% +-1.4   (19/296)
+  pass@4               :  10.8%   (8/74 tasks)
+  partial credit       :  10.1%
+W0911 13:38:30.354000 75866 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:38:30.354000 75866 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:38:30.357000 75866 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:38:30.357000 75866 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:38:30.357000 75866 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:38:30.358000 75866 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:38:30.358000 75866 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:38:30.358000 75866 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:38:30.422000 75866 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:38:30.422000 75866 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:38:30.422000 75866 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 13:38:30.423000 75866 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 13:38:30.423000 75866 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 13:38:30.423000 75866 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+W0911 13:38:58.346000 75866 torch/_dynamo/convert_frame.py:2008] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0911 13:38:58.346000 75866 torch/_dynamo/convert_frame.py:2008] [0/8]    function: 'flex_attention' (/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2365)
+W0911 13:38:58.346000 75866 torch/_dynamo/convert_frame.py:2008] [0/8]    last reason: 0/7: tensor 'key' size mismatch at index 2. expected 66, actual 65
+W0911 13:38:58.346000 75866 torch/_dynamo/convert_frame.py:2008] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0911 13:38:58.346000 75866 torch/_dynamo/convert_frame.py:2008] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2596: UserWarning: flex_attention called without torch.compile() - this will use an unfused implementation that materializes the full scores matrix instead of generating a fused kernel.
+
+SOLUTION: Use torch.compile(flex_attention)(...)
+
+If you want to debug your score_mod/mask_mod, you can set:
+torch.nn.attention.flex_attention._FLEX_ATTENTION_DISABLE_COMPILE_DEBUG = True
+
+This will allow you to use print statements or breakpoints. Note: This doesn't work with the backwards pass and may produce incorrect results.
+  _warn_once(
+
+=== sft_ho.pt  single-turn MBPP  74 tasks x 4 samples = 296 samples  (T=1.0, HELD-OUT) ===
+  emitted a code block :  97.6%
+  pass@1               :   1.0% +-0.6   (3/296)
+  pass@4               :   2.7%   (2/74 tasks)
+  partial credit       :   1.7%
+HELDOUTDONE
