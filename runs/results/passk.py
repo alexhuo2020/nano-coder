@@ -23,10 +23,11 @@ from blackwell_lm.tasks import get_tasks
 from blackwell_lm.tokenizer import EOS, load_tokenizer
 
 TIER = sys.argv[1] if len(sys.argv) > 1 else "stub"
+CKPT = sys.argv[2] if len(sys.argv) > 2 else "/home/ubuntu/bnano/agent_repo_ab.pt"
 NTASK, K = 20, 12
 
 tok = load_tokenizer("/home/ubuntu/bnano/tokenizer.json"); eos = tok.token_to_id(EOS)
-p = "/home/ubuntu/bnano/agent_repo_ab.pt"
+p = CKPT
 ck = torch.load(p, map_location="cpu", weights_only=False)
 cfg = ModelConfig(**ck["cfg"]); cfg.max_seq_len = max(cfg.max_seq_len, 2048)
 m = BlackwellLM(cfg, precision="bf16", device="cuda", dtype=torch.bfloat16)
@@ -74,7 +75,7 @@ for sc in scns:
 
 se = lambda q, n: math.sqrt(max(q * (1 - q), 1e-9) / n) * 100
 print()
-print(f"=== tier={TIER}  {NTASK} tasks x {K} samples = {tot} episodes ===")
+print(f"=== {os.path.basename(p)}  tier={TIER}  {NTASK} tasks x {K} samples = {tot} episodes ===")
 print(f"pass@1            {tot_solved/tot*100:5.1f}% +-{se(tot_solved/tot, tot):.1f}   ({tot_solved}/{tot} samples)")
 print(f"pass@{K:<2}           {any_solved/NTASK*100:5.1f}%          ({any_solved}/{NTASK} tasks ever solved)")
 print(f"any partial credit{partial/tot*100:5.1f}%          ({partial}/{tot} samples with reward>0)")

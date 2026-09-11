@@ -27,9 +27,19 @@ real repositories.
 > disk.** Details in [the hardness audit](#the-70-solve-rate-on-these-repos-was-an-artifact-measured)
 > below and §6 of the report.
 >
-> The load-bearing conclusion: at 85M parameters an agentic **tool workflow**
-> and the ability to **write code** are separable capabilities, and only the
-> first is reachable.
+> **Then that retraction was itself half wrong.** The 0/120 was blamed on an
+> 85M "capability ceiling". It was not: `train_sft.py` defaulted to building
+> repo demos on the `mutate` tier, so every demonstration taught *write the
+> file back with one token changed* - and that is what the model learned
+> (236/240 echoed the stub verbatim). Rebuilding the demos on `stub`, where the
+> demonstration writes the whole body, took **pass@1 from 0% to 9.6% and
+> pass@12 from 0% to 40% in 11 minutes of SFT.**
+>
+> The load-bearing conclusion is therefore about method, not capacity: **check
+> what your demonstrations actually demonstrate before declaring a capability
+> limit.** A flattering benchmark made the model look better than it was; a
+> flattering training set made it *worse* than it was. Same hidden parameter,
+> opposite directions, and I missed the second one while writing up the first.
 
 ## Target vs achieved
 
@@ -44,7 +54,7 @@ numbers happened.
 | Pretrain | ~37B tokens in 3 days (289 tok/param) | **20.40B tokens** (240 tok/param), held-out CE **2.1155** |
 | Throughput | - | 45,146 tok/s (PRO 4500); **119,807 tok/s** (PRO 6000, tuned) |
 | Full loop | ~82 hours, ~$118 at $1.43/hr spot | ~4 days, **~$180** incl. all post-training and probes |
-| Goal | output that reads as acceptable English/code; wrong often, not word salad | **met for simple prompts.** Not met for writing code: 0/240 from a stub |
+| Goal | output that reads as acceptable English/code; wrong often, not word salad | **met.** Writes correct functions from a bare stub in 9.6% of samples (40% pass@12) once the demos teach that task |
 
 ## What the hardware actually rewards
 
@@ -537,14 +547,52 @@ reads, edits and verifies. It just writes wrong code with total confidence. Tool
 use and coding are separable capabilities, and at 85M only the first is
 reachable.
 
-**Consequence: teacher distillation was designed and then not built.** The
-obvious escalation was to have a strong agent generate trajectories to imitate.
-It would not have helped, and the table says why: demonstrations teach the
-*shape* of read -> edit -> verify, which this model has already mastered at
-93-98%. They cannot install the ability to write correct Python into 85M
-parameters. Distilling would have produced a model imitating a strong agent's
-edit structure while emitting wrong bodies -- the current failure exactly. A
-20-minute probe replaced an API budget and several GPU-hours.
+#### ...and then the diagnosis was wrong too. It was the TRAINING data.
+
+The paragraph that used to sit here argued the 0/120 was an 85M capability
+ceiling, and that teacher distillation therefore could not help. That was wrong,
+and the cause was one defaulted argument in this repo:
+
+```python
+scns = build_scenarios(base_tasks, seed=1)   # difficulty defaults to "mutate"
+```
+
+Every repo demonstration the policy had ever seen was a single-token mutation,
+where the correct fix is *write the file back with one token changed*. So that
+is what it learned -- and the stub probe caught it exactly: **236 of 240
+episodes wrote the unchanged stub back to disk.** It had mastered copying, not
+coding.
+
+Adding `--tool-difficulty` and rebuilding the demos on `stub` -- where the
+demonstration writes the **whole reference body** -- and re-running SFT for
+1,500 steps (11 minutes):
+
+| stub tier, 240 episodes | mutate-trained demos | **stub-trained demos** |
+|---|---|---|
+| pass@1 | 0.0% (0/240) | **9.6% +-1.9** (23/240) |
+| pass@12 | 0.0% (0/20 tasks) | **40.0%** (8/20 tasks) |
+| any partial credit | 0.0% | **11.2%** |
+| left the stub unchanged | **236/240** | 99/240 |
+| wrote valid Python | 1/240 | **92/240** |
+
+Correct code, written from a bare stub, reward 1.00:
+
+```python
+def max_of_nth(test_list, N):
+  res = max([sub[N] for sub in test_list])
+  return (res)
+```
+
+**The method lesson, learned twice in one day in opposite directions.** A
+benchmark's difficulty and a training set's difficulty are the same hidden
+parameter. The flattering *benchmark* made the model look better than it was
+(70% -> 0%); the flattering *training set* made it look worse than it was
+(0% -> 9.6%). Check what your demonstrations actually demonstrate -- print one
+and read it -- before declaring any capability limit.
+
+And pass@12 = 40% is the precondition RL needed: groups now have reward spread,
+so GRPO takes real update steps instead of dropping every group as
+zero-variance.
 
 ### Honest summary
 

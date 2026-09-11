@@ -133,6 +133,16 @@ def main():
                         "tool call and agentic RL degenerates to single-turn RL "
                         "(measured: 0 tool calls in 100 episodes).")
     p.add_argument("--tool-task-set", default="mbpp", choices=["mbpp", "easy"])
+    p.add_argument("--tool-difficulty", default="mutate",
+                   choices=["mutate", "multi", "stub", "swap"],
+                   help="how the repo demos' solution.py is broken. THIS "
+                        "DECIDES WHAT THE DEMOS TEACH. The default mutate is a "
+                        "single regex substitution, so the demonstrated fix is "
+                        "'write the file back with one token changed' -- and "
+                        "that is what the policy learned: probed on stub tasks "
+                        "it wrote the UNCHANGED stub back in 236 of 240 "
+                        "episodes, having mastered copying rather than coding. "
+                        "stub demos instead show the whole body being written.")
     p.add_argument("--tool-mode", default="snippet",
                    choices=["snippet", "repo", "both"],
                    help="snippet: run_tests(code) trajectories. repo: "
@@ -187,7 +197,8 @@ def main():
             from blackwell_lm.scenario import build_scenarios
             from blackwell_lm.tool_sft import stream_repo_sft
 
-            scns = build_scenarios(base_tasks, seed=1)
+            scns = build_scenarios(base_tasks, seed=1,
+                                   difficulty=a.tool_difficulty)
             repo_stream = stream_repo_sft(scns, seed=1)
             if a.tool_mode == "repo":
                 tool_stream = repo_stream
@@ -214,7 +225,9 @@ def main():
 
         stream = blended(stream, tool_stream, a.tool_frac)
         log(f"SFT mixture: {1 - a.tool_frac:.0%} instruction + {a.tool_frac:.0%} "
-            f"synthetic tool-use [mode={a.tool_mode}] ({a.tool_task_set} "
+            f"synthetic tool-use [mode={a.tool_mode}"
+            f"{'/' + a.tool_difficulty if a.tool_mode != 'snippet' else ''}] "
+            f"({a.tool_task_set} "
             f"reference solutions; tool output from REAL sandbox execution)")
     batches = sft_batches(stream, tok, eos_id, a.batch_size, a.max_len)
     held = list(itertools.islice(batches, a.held_out))

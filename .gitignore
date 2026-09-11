@@ -34,3 +34,8 @@ report/b2.log
 !runs/metrics/*.csv
 !runs/metrics/*.json
 !runs/results/*
+
+# Captured client requests are for one-off measurement, not source. The one
+# that matters is copied into runs/results/claude_code_request.json as evidence.
+serve/captured/
+serve/probe.log

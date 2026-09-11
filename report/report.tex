@@ -60,21 +60,32 @@ $1.8564 \rightarrow 0.9830$ with chat-format compliance $0\% \rightarrow 100\%$;
 agentic episode reward $0.183 \rightarrow 0.656$ on a control task set.
 
 \medskip\noindent
-The report's most important content is a \emph{retraction}. The
-headline agentic result --- a $70\%$ solve rate on repository repair tasks ---
-was re-probed against harder breakages of the same tasks and collapsed to
-\textbf{0 of 120 episodes}, twice. The metric had been measuring the reversal of
-single-token mutations, not the ability to repair code. A follow-up
-$\mathrm{pass@}12$ probe found $0/240$ samples with \emph{any} partial credit,
-and that in $236$ of $240$ episodes the model wrote the unchanged stub back to
-disk. We report how the artifact was found, why the failure was invisible for
-several days, and why the planned next step --- distilling trajectories from a
-stronger teacher agent --- was designed and then deliberately not built.
+The report's most important content is \emph{two nested retractions}. First, the
+headline agentic result --- a $70\%$ solve rate on repository repair --- was
+re-probed against harder breakages of the same tasks and collapsed to
+\textbf{0 of 120 episodes}, twice: the metric had been measuring the reversal of
+single-token mutations, not the repair of code. A $\mathrm{pass@}12$ probe found
+$0/240$ samples with \emph{any} partial credit, and that in $236$ of $240$
+episodes the model wrote the unchanged stub back to disk.
 
 \medskip\noindent
-The engineering conclusion is that at this scale an agentic \emph{tool workflow}
-and the ability to \emph{write code} are separable capabilities, and only the
-first is reachable.
+Second, the diagnosis of \emph{that} failure was also wrong. It was attributed
+to a code-generation capability ceiling at 85M, with the conclusion that teacher
+distillation could not help. The real cause was a defaulted argument in this
+project's own SFT script: every repository demonstration had been built on the
+single-token-mutation tier, so the policy had been taught to copy a file back
+with one token changed --- which is precisely what it did. Rebuilding the
+demonstrations on the \code{stub} tier and re-running SFT for $11$ minutes took
+$\mathrm{pass@}1$ from $\mathbf{0\%}$ to $\mathbf{9.6\% \pm 1.9}$ and
+$\mathrm{pass@}12$ from $\mathbf{0\%}$ to $\mathbf{40\%}$, with the model
+writing correct function bodies from bare stubs.
+
+\medskip\noindent
+The conclusion is therefore about method rather than capacity. A benchmark's
+difficulty and a training set's difficulty are the same hidden parameter: the
+flattering benchmark made the model look better than it was, and the flattering
+training set made it look worse. Both were defaults chosen for convenience, and
+both silently became definitions.
 \end{abstract}
 
 \vspace{-0.3cm}
@@ -94,6 +105,8 @@ Tokenizer + data & 32{,}784-token BPE, 20.4B-token corpus & --- \\
 4. Agentic RL (control) & reward $0.183 \rightarrow 0.656$, solved $15.6\% \rightarrow 52.5\%$ & \YES \\
 4. Agentic RL (repo) & \emph{apparent} solve $42.5\% \rightarrow 50.9\%$ / $62.5\%$ & \textbf{\color{acc}retracted} \\
 5. Hardness audit & $0/120$ solved on honest breakage tiers & --- \\
+6. Cause found & demos were built on the easy tier, not a capacity limit & --- \\
+7. SFT on \code{stub} demos & $\mathrm{pass@}1$ $0\% \rightarrow 9.6\%$; $\mathrm{pass@}12$ $0\% \rightarrow 40\%$ & \YES \\
 \bottomrule
 \end{tabular}
 \caption{Every stage ran, and every stage moved its metric. Stage~4's repository
@@ -457,33 +470,118 @@ because a refactor that quietly reintroduced a hint would make the benchmark
 flattering again, and the number would look like progress.
 \end{finding}
 
-\section{The teacher-distillation plan, and why it was not built}
+\section{The capability ceiling that was not one}
+\label{sec:notaceiling}
 
-The intended next stage was to have a strong agent generate trajectories for the
-85M model to imitate. It was designed and then deliberately abandoned, on two
-independent grounds --- either sufficient alone.
+Section~\ref{sec:hardness} concluded that the $0/120$ reflected a
+code-generation \emph{capability} limit at 85M, and that teacher distillation
+therefore could not help. That conclusion was wrong, and the cause was a
+defaulted argument in this repository's own SFT script:
 
-\medskip\noindent\textbf{It would not have worked.} The binding constraint is
-code-generation \emph{capability}. Demonstrations teach the \emph{shape} of
-\code{read} $\rightarrow$ \code{edit} $\rightarrow$ \code{verify}, which this
-policy already executes at $93$--$98\%$. They cannot install the ability to
-write correct Python into 85M parameters. Distillation would have produced a
-model imitating a strong agent's edit structure while emitting wrong function
-bodies --- precisely the current failure. And because $\mathrm{pass@}12$ is $0$
-with no partial credit, the RL stage that would follow the distillation cannot
-take a single update step regardless of the data's quality. A $20$-minute probe
-replaced an API budget and several GPU-hours.
+\begin{center}
+\code{scns = build\_scenarios(base\_tasks, seed=1)}\quad\emph{--- difficulty
+defaults to \code{"mutate"}}
+\end{center}
 
-\medskip\noindent\textbf{It would also have been a terms violation.} Using a
-Claude subscription to generate training data for a different model is a
-restricted use under Anthropic's terms. This was flagged when the idea was first
-raised and did not change.
+Every repository demonstration the policy had ever seen was a single-token
+mutation, where the correct fix is \emph{write the file back with one token
+changed}. So that is what it learned, and the probe caught it precisely: in
+$236$ of $240$ episodes it wrote the \emph{unchanged stub} back to disk. It had
+mastered copying, not coding. The $93$--$98\%$ ``wrote a file'' rate was
+measuring a copy.
 
-\medskip\noindent A related proposal --- serving this checkpoint as a backend
-for a coding CLI --- fails on a third, simpler ground: the checkpoint's context
-is $2{,}048$ tokens, and such a tool's system prompt and tool schemas alone
-exceed that before the user's first message. The model would be truncated out of
-its own instructions.
+Adding \code{--tool-difficulty} and rebuilding the demonstrations on the
+\code{stub} tier --- where the demonstration writes the \textbf{whole reference
+body} --- then re-running SFT for $1{,}500$ steps ($11$ minutes, one GPU):
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{\code{stub} tier, 240 episodes} & \textbf{mutate-trained demos} & \textbf{stub-trained demos} \\
+\midrule
+$\mathrm{pass@}1$          & $0.0\%$ \;(0/240)       & $\mathbf{9.6\% \pm 1.9}$ \;(23/240) \\
+$\mathrm{pass@}12$         & $0.0\%$ \;(0/20 tasks)  & $\mathbf{40.0\%}$ \;(8/20 tasks) \\
+any partial credit         & $0.0\%$                 & $\mathbf{11.2\%}$ \\
+left the stub unchanged    & $\mathbf{236/240}$      & $99/240$ \\
+wrote valid Python         & $1/240$                 & $\mathbf{92/240}$ \\
+\bottomrule
+\end{tabular}
+\caption{The same checkpoint lineage, the same tasks, the same probe. The only
+change is which tier the \emph{demonstrations} were built on.}
+\end{table}
+
+\noindent Correct code, written from a bare stub, reward $1.00$:
+
+\begin{center}
+\begin{minipage}{0.62\textwidth}
+\small
+\begin{verbatim}
+def max_of_nth(test_list, N):
+  res = max([sub[N] for sub in test_list])
+  return (res)
+\end{verbatim}
+\end{minipage}
+\end{center}
+
+\begin{retraction}{The method lesson, learned twice in one day, in opposite directions}
+A benchmark's difficulty and a training set's difficulty are the same hidden
+parameter, and an unexamined parameter is an assumption either way. The
+flattering \emph{benchmark} made the model look better than it was
+($70\% \rightarrow 0\%$). The flattering \emph{training set} made it look worse
+than it was ($0\% \rightarrow 9.6\%$). Both were defaults chosen because they
+were the easiest thing to implement, and both silently became definitions ---
+of the task, and then of the model's ceiling.
+
+The operational rule: \textbf{before declaring a capability limit, print one
+demonstration and read it.} Had that been done once, the second error would not
+have happened -- and it was made while writing up the first.
+\end{retraction}
+
+\noindent Two revisions follow for the earlier claims.
+
+\medskip\noindent\textbf{``RL cannot bootstrap a convention the policy never
+emits'' survives, with a sharper statement.} It is not enough to add
+demonstrations; they must demonstrate \emph{the target behaviour}. Demos of an
+adjacent, easier task actively train the wrong skill, which is what happened
+here. And $\mathrm{pass@}12 = 40\%$ supplies exactly the precondition RL was
+missing: groups now carry reward spread instead of being dropped as
+zero-variance.
+
+\medskip\noindent\textbf{Teacher distillation is no longer ruled out on
+capability grounds} --- better demonstrations demonstrably move this model.
+It remains not built here for a separate and unchanged reason: using a Claude
+subscription to generate training data for a different model is a restricted use
+under Anthropic's terms. That was flagged when the idea was first raised.
+
+\section{Driving a coding CLI with this model}
+
+A working Anthropic-compatible server (\code{serve/anthropic\_shim.py}) serves
+the checkpoint, with no Anthropic model anywhere in the loop, so a real client
+can drive it via \code{ANTHROPIC\_BASE\_URL}. Two findings.
+
+\medskip\noindent\textbf{The $2{,}048$-token context was not a wall, and
+raising it to $32{,}768$ was free.} Measured against a recording server, Claude
+Code's first request is ${\sim}18{,}850$ tokens, of which ${\sim}15{,}100$ is
+tool JSON Schema. That looked fatal. But \code{max\_seq\_len} never reached the
+weights: RoPE is a \emph{non-persistent} buffer rebuilt from config, and with
+\code{window=1024} and \code{global\_every\_loop=0} every attention application
+is a $1{,}024$-token sliding window, so no relative offset above $1{,}024$ ever
+occurs however long the sequence is. Held-out CE on tokens \emph{past} the
+$2{,}048$ training length is $1.26$ at $4{,}096$ and $1.16$ at $8{,}192$ ---
+no degradation, where broken extrapolation would show CE in the tens. At
+$32{,}768$ the server uses $609$\,MiB and answers in $3.6$\,s.
+
+\medskip\noindent\textbf{It connects, and the output is unusable.} With the
+whole prompt fitting and $28$k tokens to spare, asked to write and save a
+two-number addition function, the model replied with prose about an invented
+``\emph{My User GPT}'' and a ``\emph{myapp framework}'': no tool call, no code,
+no file. Through the same server with a \emph{short} prompt it writes
+\code{def add\_two(a, b): return a + b} correctly. The failure is therefore
+prompt distribution, not plumbing and not context: a coding CLI's instruction
+blob bears no resemblance to the four-tool, ${\sim}500$-token convention this
+policy was trained on. Matching the client's prompt format would be its own
+SFT stage.
 
 \section{Reproducibility and artifacts}
 
@@ -546,26 +644,33 @@ MCP-shaped tools, verified scenarios across four difficulty tiers, a
 harness-owned grader, and durable metrics. That was the project's stated goal:
 prove the pipeline, then point it at a real base model.
 
-\medskip\noindent\textbf{The model is at its ceiling, and the ceiling is
-narrower than it appeared.} An 85M model at $240$ tokens/param can convincingly
-learn an agentic \emph{tool workflow} --- $93$--$98\%$ write rate, $86\%$
-self-verification, $0.07\%$ malformed calls. It cannot learn to \emph{write
-code}: $0/240$ from a stub, $9/300$ on MBPP. Those turned out to be separable
-capabilities, and no amount of reward shaping or teacher data changes the second
-one at this size.
+\medskip\noindent\textbf{The ceiling I reported was my own training data.}
+An 85M model at $240$ tokens/param learns the agentic \emph{tool workflow}
+convincingly --- $93$--$98\%$ write rate, $86\%$ self-verification, $0.07\%$
+malformed calls. I then reported that it \emph{cannot} learn to write code
+($0/240$ from a stub) and called that a capacity limit. It was not: the
+demonstrations had taught copying. With demonstrations of the actual target it
+writes correct bodies from bare stubs at $9.6\%$ $\mathrm{pass@}1$ and $40\%$
+$\mathrm{pass@}12$. The honest remaining limit is that $9.6\%$ is low, not that
+it is zero --- and the difference between those two claims is the whole
+difference between ``this scale cannot do it'' and ``this run had not taught
+it''.
 
-\medskip\noindent\textbf{Recommended next step.} Run this same stack on an
-open-weights coding base in the 7B--30B range with a permissive licence, using
-\code{--difficulty stub} rather than \code{mutate} now that the easy tier is
-known to flatter. A model at that scale has non-zero $\mathrm{pass@}k$ on stub
-tasks, which means GRPO has variance to work with and can actually take update
-steps --- the precondition this project's final audit shows to be missing at 85M.
+\medskip\noindent\textbf{Recommended next steps.} Two, in order.
+\emph{(i)} Train on \code{stub}/\code{swap} rather than \code{mutate}
+throughout, now that the easy tier is known to flatter in both directions.
+$\mathrm{pass@}12 = 40\%$ supplies the variance GRPO needs, so agentic RL on
+this tier is now viable at 85M --- it was not before, and the obstacle was the
+demonstrations, not the scale. \emph{(ii)} Then run the same stack on an
+open-weights coding base in the 7B--30B range with a permissive licence, which
+is what the pipeline was built to be pointed at.
 
 \medskip
 \begin{center}
 \small\color{ink}\itshape
-Of the results in this report, the one that changed the decision was the
-negative one.
+The two results that changed a decision in this project were both negative,
+and the second one was a correction of the first.
 \end{center}
+
 
 \end{document}
