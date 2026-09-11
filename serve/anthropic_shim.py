@@ -202,12 +202,15 @@ def flatten_content_cc(content, role):
                                                     blk.get("input"))
             parts.append("```tool\n" + json.dumps(payload) + "\n```")
         elif t == "tool_result":
-            # Strip the client's cat -n line numbering: the model's trained
-            # read_file returns the raw file, and a numbered file is out of
-            # distribution exactly where it hurts -- the content it is about
-            # to rewrite.
-            parts.append(cli_adapter.strip_line_numbers(
-                flatten_content(blk.get("content"))))
+            raw = flatten_content(blk.get("content"))
+            # Tool RESULTS must match training too, not just tool calls.
+            # pytest's real output is nothing like the "3/3 tests passed" the
+            # model's own run_tests returns; given the raw form it looped
+            # read -> test -> read -> test and never wrote a fix (0/10 CLI
+            # trials). Line numbering gets stripped for the same reason.
+            norm = cli_adapter.normalise_test_output(raw)
+            parts.append(norm if norm is not None
+                         else cli_adapter.strip_line_numbers(raw))
     return "\n".join(p for p in parts if p)
 
 

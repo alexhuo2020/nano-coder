@@ -1,0 +1,6 @@
+Write a python function to count the total unset bits from 1 to n.
+
+Your solution must satisfy:
+assert count_Unset_Bits(2) == 1
+
+The file solution.py in this repo is failing its tests. Read it, fix it, and verify with run_tests.

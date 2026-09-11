@@ -104,16 +104,29 @@ _CLI_TO_MODEL = {
 }
 
 
+def _basename(path: str) -> str:
+    """Basename for EITHER platform's separator.
+
+    os.path.basename runs on the SERVER. On Linux it does not treat `\\` as a
+    separator, so a Windows client's "C:\\Users\\me\\proj\\solution.py" came
+    back whole. That full path was then replayed into the model's transcript,
+    where training had only ever shown "solution.py" -- and the model started
+    emitting 60-character absolute paths and omitting `content` entirely.
+    Every write_file became UNMAPPABLE and no fix was ever applied.
+    """
+    return re.split(r"[\\/]", (path or "").strip())[-1]
+
+
 def cli_call_to_model(name: str, tool_input: dict) -> dict:
     """A CLI tool_use block -> the model's fenced-tool JSON payload."""
     ti = tool_input or {}
     mapped = _CLI_TO_MODEL.get(name, name)
     if mapped == "read_file":
         return {"name": "read_file",
-                "args": {"path": os.path.basename(ti.get("file_path", "") or "")}}
+                "args": {"path": _basename(ti.get("file_path", ""))}}
     if mapped == "write_file":
         return {"name": "write_file",
-                "args": {"path": os.path.basename(ti.get("file_path", "") or ""),
+                "args": {"path": _basename(ti.get("file_path", "")),
                          "content": ti.get("content", ti.get("new_string", ""))}}
     if mapped == "list_dir":
         return {"name": "list_dir", "args": {"path": "."}}
@@ -124,6 +137,52 @@ def cli_call_to_model(name: str, tool_input: dict) -> dict:
 
 # --------------------------------------------------------------- tool results
 _LINENO = re.compile(r"^\s*\d+\t", re.MULTILINE)
+
+
+_PYTEST_MIXED = re.compile(r"(\d+)\s+failed,\s*(\d+)\s+passed")
+_PYTEST_PASSED = re.compile(r"(?<!no )(\d+)\s+passed")
+_PYTEST_FAILED = re.compile(r"(\d+)\s+failed")
+_PYTEST_ERROR = re.compile(r"(\d+)\s+error")
+
+
+def normalise_test_output(text: str) -> str | None:
+    """Raw pytest output -> the "N/M tests passed" the model was trained on.
+
+    THE TOOL RESULT FORMAT MATTERS AS MUCH AS THE TOOL CALL FORMAT, and this
+    was missed for a layer longer. The model's own `run_tests` returns exactly
+    "3/3 tests passed". Mapped onto Claude Code's `Bash` it instead receives
+    pytest's real output -- "1 failed in 0.08s", assertion tracebacks, summary
+    lines -- which it has never seen.
+
+    Measured consequence: across 10 CLI trials the model called
+    read_file -> run_tests -> read_file -> run_tests and NEVER write_file,
+    because it could not tell from the output whether anything had happened.
+    0/10 solved, while the same model in the harness solves 56.7%.
+
+    Returns None when the text is not a pytest summary, so ordinary command
+    output passes through untouched.
+    """
+    t = text or ""
+    m = _PYTEST_MIXED.search(t)
+    if m:
+        failed, passed = int(m.group(1)), int(m.group(2))
+        return f"{passed}/{passed + failed} tests passed"
+    m = _PYTEST_FAILED.search(t)
+    if m:
+        failed = int(m.group(1))
+        p = _PYTEST_PASSED.search(t)
+        passed = int(p.group(1)) if p else 0
+        return f"{passed}/{passed + failed} tests passed"
+    m = _PYTEST_ERROR.search(t)
+    if m:
+        # A collection error is zero of an unknown total; say so plainly rather
+        # than inventing a denominator.
+        return "0 tests passed (the test run errored)"
+    m = _PYTEST_PASSED.search(t)
+    if m:
+        passed = int(m.group(1))
+        return f"{passed}/{passed} tests passed"
+    return None
 
 
 def strip_line_numbers(text: str) -> str:

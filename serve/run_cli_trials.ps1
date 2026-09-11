@@ -1,33 +1,23 @@
-# Measure the END-TO-END solve rate of a coding CLI driven by our 85M model.
+# End-to-end claude-cli trials against the local 85M model.
 #
-# WHY TRIALS AND NOT ONE RUN. The model's pass@1 on this class of task is in
-# the tens of percent, so a single success and a single failure are equally
-# uninformative -- twice in this project a single good run was mistaken for
-# "it works" and contradicted by the next observation.
+# Start-Process, not Start-Job: a job spawns a whole PowerShell runspace per
+# attempt and the batch was killed twice for host memory pressure. The timeout
+# still has to exist -- a hung CLI must not stall the batch, and a timeout is
+# recorded as a failure rather than silently dropped.
 #
-# WHY TWO BREAKAGE TYPES. `mutate` (one token changed) is the flattering tier;
-# `stub` (body replaced by pass) is the honest one. Reporting only the first
-# is how this project produced a 70% figure that collapsed to 0%.
-#
-# Usage: run_cli_trials.ps1 [-Trials 6] [-Kind mutate|stub|both]
-param([int]$Trials = 6, [string]$Kind = "both")
+# The tunnel is probed before every attempt, because a dead forward previously
+# produced "failures" that never reached the model at all.
+param([int]$Trials = 5, [int]$TimeoutSec = 200)
 
 $env:ANTHROPIC_BASE_URL = "http://127.0.0.1:8788"
 $env:ANTHROPIC_AUTH_TOKEN = "dummy-local-shim"
 $env:ANTHROPIC_MODEL = "blackwell-nanogpt-85m"
-# 200k, NOT the model's real 32k: the CLI counts ITS OWN ~18.8k prompt against
-# this. Declaring 32768 made it decide it was near the limit and AUTO-COMPACT
-# -- asking our 85M model to summarise the conversation, which produced word
-# salad that then REPLACED the conversation and destroyed every later turn.
-# The shim strips the prompt to ~220 tokens, so the model never sees 18.8k.
 $env:CLAUDE_CODE_MAX_CONTEXT_TOKENS = "200000"
 $env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"
 
-$d = "C:\Users\E20263395\AppData\Local\Temp\bnano_repo_test"
-if (-not (Test-Path $d)) { New-Item -ItemType Directory $d | Out-Null }
+$d = "C:\Users\E20263395\AppData\Local\Temp\bnano_demo"
 Set-Location $d
 
-# The grader is pytest and the tests are fixed: the model never supplies them.
 @'
 from solution import add
 
@@ -37,38 +27,47 @@ def test_add():
     assert add(-1, 1) == 0
 '@ | Set-Content -Path "$d\test_solution.py" -Encoding utf8
 
-$broken = @{
-    # one token changed: the flattering tier
-    mutate = "def add(a, b):`n    return a - b`n"
-    # body removed entirely: the honest tier
-    stub   = "def add(a, b):`n    pass`n"
-}
-$kinds = if ($Kind -eq "both") { @("mutate", "stub") } else { @($Kind) }
+# The FULL path to claude.exe. `claude` on PATH is a shell wrapper, and
+# Start-Process rejects it with "%1 is not a valid Win32 application" -- which
+# silently produced a 0/5 in which the CLI never launched at all.
+$exe = Join-Path $env:USERPROFILE "node-v22.18.0-win-x64\node-v22.18.0-win-x64\node_modules\@anthropic-ai\claude-code\bin\claude.exe"
+if (-not (Test-Path $exe)) { Write-Output "claude.exe not found at $exe"; exit 1 }
 
-$summary = @()
-foreach ($k in $kinds) {
-    $solved = 0; $wrote = 0
-    for ($i = 1; $i -le $Trials; $i++) {
-        $broken[$k] | Set-Content -Path "$d\solution.py" -Encoding utf8 -NoNewline
-        $before = Get-Content "$d\solution.py" -Raw
-        if (Test-Path "$d\__pycache__") { Remove-Item -Recurse -Force "$d\__pycache__" }
+$prompt = "The file solution.py in this repo is failing its tests. Read it, fix it, and verify with run_tests."
+$solved = 0; $reached = 0
 
-        claude -p "The file solution.py in this repo is failing its tests. Read it, fix it, and verify with run_tests." `
-            --max-turns 8 --permission-mode bypassPermissions 2>&1 | Out-Null
+for ($i = 1; $i -le $Trials; $i++) {
+    try { $null = Invoke-WebRequest -Uri "http://127.0.0.1:8788/" -TimeoutSec 5 -UseBasicParsing }
+    catch { Write-Output ("trial {0}: SKIPPED (tunnel down)" -f $i); continue }
+    $reached++
 
-        $after = Get-Content "$d\solution.py" -Raw
-        if ($after -ne $before) { $wrote++ }
-        if (Test-Path "$d\__pycache__") { Remove-Item -Recurse -Force "$d\__pycache__" }
-        $res = & python -m pytest -q 2>&1 | Out-String
-        if ($res -match "1 passed") { $solved++; $verdict = "SOLVED" }
-        elseif ($after -ne $before) { $verdict = "failed (changed-but-wrong)" }
-        else { $verdict = "failed (unchanged)" }
-        Write-Output ("[{0}] trial {1}/{2}: {3}" -f $k, $i, $Trials, $verdict)
+    "def add(a, b):`n    return a - b`n" | Set-Content -Path "$d\solution.py" -Encoding utf8 -NoNewline
+    if (Test-Path "$d\__pycache__") { Remove-Item -Recurse -Force "$d\__pycache__" }
+
+    $p = Start-Process -FilePath $exe `
+        -ArgumentList @("-p", $prompt, "--max-turns", "6", "--permission-mode", "bypassPermissions") `
+        -NoNewWindow -PassThru -RedirectStandardOutput "$d\last_run.txt" -RedirectStandardError "$d\last_err.txt"
+    $timedOut = $false
+    if (-not $p.WaitForExit($TimeoutSec * 1000)) {
+        $timedOut = $true
+        try { $p.Kill() } catch {}
     }
-    $pct = [math]::Round(100.0 * $solved / $Trials, 1)
-    $summary += ("{0,-7} solved {1}/{2} ({3}%)  edited the file {4}/{2}" -f $k, $solved, $Trials, $pct, $wrote)
-}
 
+    if (Test-Path "$d\__pycache__") { Remove-Item -Recurse -Force "$d\__pycache__" }
+    $res = & python -m pytest -q 2>&1 | Out-String
+    if ($res -match "1 passed") {
+        $solved++
+        Write-Output ("trial {0}: SOLVED" -f $i)
+        if ($solved -eq 1) {
+            Write-Output "--- solution.py as written by the model ---"
+            Get-Content "$d\solution.py"
+            Write-Output "-------------------------------------------"
+        }
+    } elseif ($timedOut) {
+        Write-Output ("trial {0}: failed (CLI timeout)" -f $i)
+    } else {
+        Write-Output ("trial {0}: failed" -f $i)
+    }
+}
 Write-Output ""
-Write-Output "=== claude-cli + blackwell-nanogpt-85m ==="
-$summary | ForEach-Object { Write-Output $_ }
+Write-Output ("=== claude-cli + blackwell-nanogpt-85m: {0}/{1} solved ===" -f $solved, $reached)

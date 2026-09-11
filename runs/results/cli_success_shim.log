@@ -1,0 +1,45 @@
+W0911 18:47:00.512000 5032 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 18:47:00.513000 5032 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 18:47:00.514000 5032 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 18:47:00.514000 5032 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 18:47:00.514000 5032 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 18:47:00.515000 5032 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 18:47:00.515000 5032 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 18:47:00.515000 5032 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 18:47:00.516000 5032 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 18:47:00.516000 5032 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 18:47:00.516000 5032 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 18:47:00.517000 5032 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 18:47:00.517000 5032 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 18:47:00.517000 5032 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[shim] loaded sft_ctl.pt  d_model=1536 n_loops=8 context=32768
+[shim] claude-code mode: model's own system prompt, tool_use translation, cwd fallback C:\Users\E20263395\AppData\Local\Temp\bnano_demo
+[shim] listening on 0.0.0.0:8788  truncate=True
+[shim] req 1: prompt 300 tok (budget 32,368) -> FITS, 1.15s
+[shim]   model called 'read_file' -> Read
+[shim] req 2: prompt 255 tok (budget 32,368) -> FITS, 0.25s
+[shim]   model called 'read_file' -> Read
+[shim] req 3: prompt 363 tok (budget 32,368) -> FITS, 1.93s
+[shim]   model called 'write_file' -> Write
+[shim] req 4: prompt 300 tok (budget 32,368) -> FITS, 0.11s
+[shim]   model called 'read_file' -> Read
+[shim] req 5: prompt 255 tok (budget 32,368) -> FITS, 0.11s
+[shim]   model called 'read_file' -> Read
+[shim] req 6: prompt 543 tok (budget 32,368) -> FITS, 1.17s
+[shim]   model called 'run_tests' -> Bash
+[shim] req 7: prompt 363 tok (budget 32,368) -> FITS, 0.51s
+[shim]   model called 'write_file' -> Write
+[shim] req 8: prompt 573 tok (budget 32,368) -> FITS, 1.61s
+[shim]   model called 'read_file' -> Read
+[shim] req 9: prompt 543 tok (budget 32,368) -> FITS, 0.08s
+[shim]   model called 'run_tests' -> Bash
+[shim] req 10: prompt 680 tok (budget 32,368) -> FITS, 1.59s
+[shim]   model called 'write_file' -> Write
+[shim] req 11: prompt 573 tok (budget 32,368) -> FITS, 0.51s
+[shim]   model called 'read_file' -> Read
+[shim] req 12: prompt 860 tok (budget 32,368) -> FITS, 1.32s
+[shim]   model called 'run_tests' -> Bash
+[shim] req 13: prompt 680 tok (budget 32,368) -> FITS, 0.5s
+[shim]   model called 'write_file' -> Write

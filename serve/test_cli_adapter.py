@@ -102,6 +102,17 @@ def test_round_trip_back_into_the_models_format():
         {"name": "run_tests", "args": {}}
     assert A.cli_call_to_model("Read", {"file_path": "/a/b/s.py"}) == \
         {"name": "read_file", "args": {"path": "s.py"}}
+    # A WINDOWS path must reduce to the basename even though this runs on
+    # Linux: os.path.basename leaves it whole, the full path is replayed into
+    # the transcript, and the model then emits 60-character absolute paths and
+    # drops `content` -- every write_file becomes unmappable and nothing is
+    # ever fixed.
+    assert A.cli_call_to_model(
+        "Read", {"file_path": "C:\\Users\\me\\proj\\solution.py"}) == \
+        {"name": "read_file", "args": {"path": "solution.py"}}
+    assert A.cli_call_to_model(
+        "Write", {"file_path": "C:\\Users\\me\\proj\\solution.py",
+                  "content": "x=1"})["args"]["path"] == "solution.py"
     # Edit carries new_string rather than content
     p = A.cli_call_to_model("Edit", {"file_path": "/repo/s.py",
                                      "new_string": "y=2"})
@@ -129,6 +140,26 @@ def test_line_numbers_are_stripped_from_read_results():
     assert A.strip_line_numbers(plain) == plain
     assert A.strip_line_numbers("") == ""
     print("Read line numbers stripped, inner tabs preserved: PASS")
+
+
+def test_pytest_output_is_normalised_to_the_trained_format():
+    """The model's own run_tests returns "3/3 tests passed". Through Claude
+    Code it gets raw pytest output instead, which it has never seen -- and it
+    then looped read -> test -> read -> test without ever writing a fix
+    (0/10 CLI trials, while the same model solves 56.7% in the harness)."""
+    assert A.normalise_test_output("1 failed in 0.08s") == "0/1 tests passed"
+    assert A.normalise_test_output("3 passed in 0.10s") == "3/3 tests passed"
+    assert A.normalise_test_output("2 failed, 1 passed in 0.2s") == "1/3 tests passed"
+    assert A.normalise_test_output(
+        "=== short test summary ===\nFAILED test_solution.py::test_add\n"
+        "1 failed in 0.08s") == "0/1 tests passed"
+    err = A.normalise_test_output("1 error in 0.05s")
+    assert err is not None and err.startswith("0 tests passed")
+
+    # anything that is not a pytest summary passes through untouched
+    for other in ("total 12\ndrwxr-xr-x 2 ubuntu ubuntu", "hello", ""):
+        assert A.normalise_test_output(other) is None, other
+    print("pytest output normalised to the trained format: PASS")
 
 
 def test_cwd_extraction():
@@ -194,6 +225,7 @@ if __name__ == "__main__":
     test_round_trip_back_into_the_models_format()
     test_parser_is_the_trained_one()
     test_line_numbers_are_stripped_from_read_results()
+    test_pytest_output_is_normalised_to_the_trained_format()
     test_cwd_extraction()
     test_windows_client_paths_are_not_mangled()
     print("\nAll cli_adapter tests passed.")
