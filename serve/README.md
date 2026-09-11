@@ -43,6 +43,38 @@ assistant, it cannot do multi-file work, and it will not build you a feature.
 Judge it against the narrow task, which it does measurably well, and not
 against a frontier model, which it is not.
 
+## Running it locally, with no GPU
+
+Verified: claude-cli driving this model on a Windows CPU fixed a held-out task
+end to end (pytest FAILED -> `1 passed`). Measured **4.5 tok/s**, ~4-18s per
+agent turn, ~340 MB of RAM.
+
+```bash
+# 1. a venv at a SHORT path. The Windows Store Python's site-packages path is
+#    long enough that torch's own deep files exceed MAX_PATH and pip dies
+#    mid-install, which is how a machine ends up with an unimportable torch.
+python -m venv C:\Users\<you>\bn
+C:\Users\<you>\bn\Scripts\python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+C:\Users\<you>\bn\Scripts\python.exe -m pip install tokenizers numpy pytest
+
+# 2. the weights
+aws s3 cp s3://nova-moe-checkpoints-045064753427/sft_v2/sft_ctl.pt local/sft_ctl.pt
+aws s3 cp s3://nova-moe-checkpoints-045064753427/blackwell_nanogpt_tokenizer.json local/tokenizer.json
+
+# 3. serve on CPU
+C:\Users\<you>\bn\Scripts\python.exe serve/anthropic_shim.py \
+  --ckpt local/sft_ctl.pt --tokenizer local/tokenizer.json \
+  --device cpu --port 8799 --context 4096 --claude-code --truncate \
+  --temperature 0.2 --cwd 'C:\path\to\your\repo'
+```
+
+Transformer Engine is not needed and is not installed: `model.py` makes its
+import optional and the low-precision layers fall back to `nn.Linear`.
+
+Known issue: the server log occasionally reports an implausible per-request
+duration (seen: 10731s during a run that took minutes). The cause is not yet
+identified, so treat per-request timings in the log as unreliable.
+
 ## Start the server
 
 On the GPU box (the checkpoint and tokenizer live beside it):
