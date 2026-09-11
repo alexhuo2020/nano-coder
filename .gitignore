@@ -39,3 +39,6 @@ report/b2.log
 # that matters is copied into runs/results/claude_code_request.json as evidence.
 serve/captured/
 serve/probe.log
+
+# Locally downloaded weights: 1.1GB, mirrored in S3, not source.
+local/

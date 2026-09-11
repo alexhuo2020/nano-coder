@@ -29,7 +29,12 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 os.environ.setdefault("NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE", "1")
-sys.path.insert(0, "/home/ubuntu/bnano")
+# The repo root, whether that is the GPU box's /home/ubuntu/bnano or a local
+# checkout: resolve it from this file rather than hardcoding one machine.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+if os.path.isdir("/home/ubuntu/bnano"):
+    sys.path.insert(0, "/home/ubuntu/bnano")
 
 import torch
 
@@ -60,6 +65,7 @@ def codex_adapter_cwd(body, fallback: str) -> str:
     return cli_adapter.extract_cwd(text, fallback)
 
 SEP = "\n---\n"                  # separator for the --dump-prompt rendering
+DEVICE = ["cuda"]                # set from --device before the model loads
 LOCK = threading.Lock()          # one GPU, one decode at a time
 STATE: dict = {}
 STATS = {"requests": 0, "overflow": 0, "served": 0}
@@ -83,8 +89,14 @@ def load(ckpt: str, tok_path: str, context: int | None = None):
     if context:
         cfg_d["max_seq_len"] = context
     cfg = ModelConfig(**cfg_d)
-    model = BlackwellLM(cfg, precision="bf16", device="cuda",
-                        dtype=torch.bfloat16)
+    # CPU runs in float32, not bfloat16: bf16 matmuls on CPU fall back to a
+    # slow emulated path, and the 85M model fits in RAM in fp32 regardless.
+    # Transformer Engine is CUDA-only and its import is already optional in
+    # model.py, so the low-precision layers degrade to nn.Linear here.
+    dev = DEVICE[0]
+    dtype = torch.bfloat16 if dev == "cuda" else torch.float32
+    model = BlackwellLM(cfg, precision="bf16" if dev == "cuda" else "bf16",
+                        device=dev, dtype=dtype)
     load_stage_checkpoint(ckpt, model)
     model.eval()
     STATE.update(tok=tok, model=model, cfg=cfg,
@@ -504,6 +516,9 @@ if __name__ == "__main__":
     ap.add_argument("--cwd", default=os.getcwd(),
                     help="fallback working directory for resolving the "
                          "relative paths the model emits")
+    ap.add_argument("--device", default="cuda", choices=["cuda", "cpu"],
+                    help="cpu runs the 85M model in fp32 with no GPU and no "
+                         "Transformer Engine (its import is already optional)")
     ap.add_argument("--temperature", type=float, default=0.2,
                     help="sampling temperature (default 0.2, measured best; "
                          "see the table on H.temperature)")
@@ -515,6 +530,7 @@ if __name__ == "__main__":
                     help="serve an over-long prompt by dropping its HEAD "
                          "instead of returning an error")
     a = ap.parse_args()
+    DEVICE[0] = a.device
     load(a.ckpt, a.tokenizer, a.context)
     H.truncate, H.max_new = a.truncate, a.max_new
     H.claude_code, H.cwd = a.claude_code, a.cwd
