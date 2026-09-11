@@ -1,0 +1,76 @@
+W0911 01:18:31.954000 9795 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:18:31.954000 9795 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 01:18:32.018000 9795 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 01:18:32.018000 9795 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:18:32.018000 9795 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 01:18:32.019000 9795 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 01:18:32.019000 9795 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:18:32.019000 9795 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 01:18:32.020000 9795 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 01:18:32.020000 9795 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:18:32.020000 9795 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 01:18:32.020000 9795 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 01:18:32.020000 9795 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:18:32.020000 9795 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[scenario] built 20 verified repo scenarios [difficulty=swap] (rejected: 0 no reference, 0 reference fails its own tests, 0 no breakage worked)
+W0911 01:18:49.145000 9795 torch/_dynamo/convert_frame.py:2008] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0911 01:18:49.145000 9795 torch/_dynamo/convert_frame.py:2008] [0/8]    function: 'flex_attention' (/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2365)
+W0911 01:18:49.145000 9795 torch/_dynamo/convert_frame.py:2008] [0/8]    last reason: 0/7: tensor 'key' size mismatch at index 2. expected 539, actual 595
+W0911 01:18:49.145000 9795 torch/_dynamo/convert_frame.py:2008] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0911 01:18:49.145000 9795 torch/_dynamo/convert_frame.py:2008] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2596: UserWarning: flex_attention called without torch.compile() - this will use an unfused implementation that materializes the full scores matrix instead of generating a fused kernel.
+
+SOLUTION: Use torch.compile(flex_attention)(...)
+
+If you want to debug your score_mod/mask_mod, you can set:
+torch.nn.attention.flex_attention._FLEX_ATTENTION_DISABLE_COMPILE_DEBUG = True
+
+This will allow you to use print statements or breakpoints. Note: This doesn't work with the backwards pass and may produce incorrect results.
+  _warn_once(
+
+=== sft_stub.pt  tier=swap  20 tasks x 12 samples = 240 episodes ===
+pass@1              0.0% +-0.0   (0/240 samples)
+pass@12             0.0%          (0/20 tasks ever solved)
+any partial credit  0.0%          (0/240 samples with reward>0)
+what it left in solution.py: {'valid python': 205, 'syntax error': 35}
+
+--- 611  reward=0.00 ----------------------------------------
+def max_of_two( x, y ):
+    if x > y:
+        return y
+    return z
+--- 611  reward=0.00 ----------------------------------------
+def max_of_two( x, y ):
+    if x < y:
+        return x
+    return y
+--- 611  reward=0.00 ----------------------------------------
+def max_of_two( x, y ):
+    if x > y:
+        return y
+    return z
+--- 611  reward=0.00 ----------------------------------------
+def max_of_two( x, y ) :   if x > y:   return x  
+  if x < y: 
+      return y
+  row = (x + 1) 
+  col = (y + 1) 
+  while row <= col: 
+    if x > y:
+        return x
+        row = col + 1
+    else:
+        return y
+--- 611  reward=0.00 ----------------------------------------
+def max_of_two( x, y ):
+    if x > y:
+        return x
+    return y
+--- 611  reward=0.00 ----------------------------------------
+def max_of_two( x, y ):
+    if x > y:
+        return y
+    return z

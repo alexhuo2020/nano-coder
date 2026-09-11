@@ -1,0 +1,72 @@
+W0911 01:40:57.620000 12835 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:40:57.620000 12835 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 01:40:57.684000 12835 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 01:40:57.684000 12835 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:40:57.684000 12835 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 01:40:57.685000 12835 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 01:40:57.685000 12835 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:40:57.685000 12835 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 01:40:57.686000 12835 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 01:40:57.686000 12835 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:40:57.686000 12835 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+W0911 01:40:57.687000 12835 torch/_library/opaque_object.py:381] is_opaque_value_type is deprecated, use is_opaque_constant_type instead
+W0911 01:40:57.687000 12835 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W0911 01:40:57.687000 12835 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[scenario] built 20 verified repo scenarios [difficulty=swap] (rejected: 0 no reference, 0 reference fails its own tests, 0 no breakage worked)
+W0911 01:41:10.212000 12835 torch/_dynamo/convert_frame.py:2008] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0911 01:41:10.212000 12835 torch/_dynamo/convert_frame.py:2008] [0/8]    function: 'flex_attention' (/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2365)
+W0911 01:41:10.212000 12835 torch/_dynamo/convert_frame.py:2008] [0/8]    last reason: 0/7: tensor 'key' size mismatch at index 2. expected 417, actual 462
+W0911 01:41:10.212000 12835 torch/_dynamo/convert_frame.py:2008] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0911 01:41:10.212000 12835 torch/_dynamo/convert_frame.py:2008] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+/home/ubuntu/.local/lib/python3.10/site-packages/torch/nn/attention/flex_attention.py:2596: UserWarning: flex_attention called without torch.compile() - this will use an unfused implementation that materializes the full scores matrix instead of generating a fused kernel.
+
+SOLUTION: Use torch.compile(flex_attention)(...)
+
+If you want to debug your score_mod/mask_mod, you can set:
+torch.nn.attention.flex_attention._FLEX_ATTENTION_DISABLE_COMPILE_DEBUG = True
+
+This will allow you to use print statements or breakpoints. Note: This doesn't work with the backwards pass and may produce incorrect results.
+  _warn_once(
+s.py:3: SyntaxWarning: 'int' object is not subscriptable; perhaps you missed a comma?
+
+=== sft_swap.pt  tier=swap  20 tasks x 12 samples = 240 episodes ===
+pass@1              5.8% +-1.5   (14/240 samples)
+pass@12            20.0%          (4/20 tasks ever solved)
+any partial credit  7.1%          (17/240 samples with reward>0)
+what it left in solution.py: {'valid python': 175, 'syntax error': 65}
+
+--- 611  reward=0.00 ----------------------------------------
+def max_of_two( x, y ):
+    if x < y:
+        return x
+    return y
+--- 611  reward=0.00 ----------------------------------------
+def max_of_two( x, y ):
+    if x > y:
+        return x
+    return y
+--- 611  reward=0.00 ----------------------------------------
+def max_of_nth(test_list, n):
+  res = max(n, test_list[n - 1 interests(aker])
+  apply(test_list, (n - 1), (test_list, n - 1)))
+  return res
+--- 611  reward=0.00 ----------------------------------------
+def max_of_ relational_query(a, b):
+    if a > b:
+        return a
+    return b
+--- 611  reward=0.00 ----------------------------------------
+def max_of_two( x, y ):
+    if x > y:
+        return x
+    return y
+--- 611  reward=0.00 ----------------------------------------
+def max_of_nth(test_list, x1, x2, y1, y2):
+   string =tuple(map(int,textwrap.302(test_list[x1:x2] + [y2]))
+   if x1 in string and x2 in string:
+       return int(string[x1:x2], 2))
+   else:
+       return int(max(sequence.values(), 2))

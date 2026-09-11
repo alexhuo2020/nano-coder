@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -38,6 +39,9 @@ from blackwell_lm.generate import generate
 from blackwell_lm.model import BlackwellLM, ModelConfig
 from blackwell_lm.tokenizer import EOS, load_tokenizer
 
+import cli_adapter
+
+SEP = "\n---\n"                  # separator for the --dump-prompt rendering
 LOCK = threading.Lock()          # one GPU, one decode at a time
 STATE: dict = {}
 STATS = {"requests": 0, "overflow": 0, "served": 0}
@@ -100,29 +104,94 @@ def flatten_content(content) -> str:
     return "\n".join(p for p in parts if p)
 
 
-def to_chat(body) -> list:
+def to_chat(body, claude_code: bool = False) -> list:
+    """Build the model's message list from an Anthropic request.
+
+    In claude_code mode the client's system prompt and 27 tool schemas are
+    REPLACED by the model's own trained system prompt (render_system_prompt(),
+    ~500 tokens, four tools). That is the whole point: the measured failure was
+    out-of-distribution prompting, not capability, so the fix is to hand the
+    model the distribution it was trained on and translate at the boundary.
+    Only the user's actual request and the tool transcript carry through.
+    """
     msgs = []
     sys_text = flatten_system(body.get("system"))
     tools = body.get("tools") or []
-    if tools:
-        # The client's schemas are summarised to NAMES ONLY. Sending 15k tokens
-        # of JSON Schema to a 2k-context model is not a tradeoff, it is a
-        # guaranteed overflow; names at least preserve which tools exist.
-        names = ", ".join(t.get("name", "?") for t in tools)
-        sys_text = (sys_text + "\n\nAvailable tools: " + names).strip()
-    if sys_text:
-        msgs.append({"role": chat.SYSTEM, "content": sys_text})
+
+    if claude_code:
+        from blackwell_lm.mcp_tools import render_system_prompt
+        msgs.append({"role": chat.SYSTEM, "content": render_system_prompt()})
+    else:
+        if tools:
+            # Outside claude_code mode the schemas are summarised to NAMES
+            # ONLY. Sending 15k tokens of JSON Schema to this model is not a
+            # tradeoff, it is a guaranteed overflow; names at least preserve
+            # which tools exist.
+            names = ", ".join(t.get("name", "?") for t in tools)
+            sys_text = (sys_text + "\n\nAvailable tools: " + names).strip()
+        if sys_text:
+            msgs.append({"role": chat.SYSTEM, "content": sys_text})
+
     for m in body.get("messages") or []:
+        raw_role = m.get("role")
         role = {"user": chat.USER, "assistant": chat.ASSISTANT,
-                "system": chat.SYSTEM}.get(m.get("role"), chat.USER)
-        msgs.append({"role": role, "content": flatten_content(m.get("content"))})
+                "system": chat.SYSTEM}.get(raw_role, chat.USER)
+        if claude_code:
+            # DROP system-role MESSAGES. Claude Code sends its tool/agent
+            # scaffolding as a `role: "system"` entry in `messages`, not in the
+            # `system` field -- measured at 1,862 tokens of "Available agent
+            # types ...". Substituting body["system"] alone therefore left the
+            # prompt at 2,102 tokens of mostly client bookkeeping, and the
+            # model answered with unrelated prose. It is not user content and
+            # the model has no use for it.
+            if raw_role == "system":
+                continue
+            content = flatten_content_cc(m.get("content"), role)
+        else:
+            content = flatten_content(m.get("content"))
+        if content:
+            msgs.append({"role": role, "content": content})
     return msgs
 
 
-def run(body, truncate: bool, max_new: int):
+def flatten_content_cc(content, role):
+    """Like flatten_content, but renders tool traffic in the MODEL's format.
+
+    An assistant tool_use block becomes the fenced ```tool {...}``` payload the
+    model was trained to emit, and a tool_result becomes a plain TOOL turn. A
+    transcript that looked like Claude Code's wire format would be as
+    out-of-distribution as the system prompt was.
+    """
+    if isinstance(content, str):
+        return content
+    parts = []
+    for blk in content or []:
+        if not isinstance(blk, dict):
+            parts.append(str(blk))
+            continue
+        t = blk.get("type")
+        if t == "text":
+            txt = blk.get("text", "")
+            # Drop the CLI's injected <system-reminder> scaffolding: it is
+            # client bookkeeping, not the user's request, and it is a large
+            # fraction of the prompt.
+            txt = re.sub(r"<system-reminder>.*?</system-reminder>", "", txt,
+                         flags=re.DOTALL).strip()
+            if txt:
+                parts.append(txt)
+        elif t == "tool_use":
+            payload = cli_adapter.cli_call_to_model(blk.get("name"),
+                                                    blk.get("input"))
+            parts.append("```tool\n" + json.dumps(payload) + "\n```")
+        elif t == "tool_result":
+            parts.append(flatten_content(blk.get("content")))
+    return "\n".join(p for p in parts if p)
+
+
+def run(body, truncate: bool, max_new: int, claude_code: bool = False):
     tok, model, cfg = STATE["tok"], STATE["model"], STATE["cfg"]
     ctx = STATE["ctx"]
-    msgs = to_chat(body)
+    msgs = to_chat(body, claude_code=claude_code)
     ids = chat.tokenize_prompt(tok, msgs)   # a list[int], NOT a tensor
     n = len(ids)
 
@@ -154,13 +223,18 @@ def run(body, truncate: bool, max_new: int):
                        zip(toks[0].tolist(), valid[0].tolist()) if v])
     STATS["served"] += 1
     return text, {"n_prompt": n, "budget": budget, "over": max(0, over),
-                  "seconds": round(dt, 2)}
+                  "seconds": round(dt, 2),
+                  "prompt_text": SEP.join(
+                      f"[{m['role']}] {m['content']}" for m in msgs)}
 
 
 class H(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     truncate = False
     max_new = 256
+    claude_code = False
+    cwd = os.getcwd()
+    dump_prompt = False
 
     def log_message(self, *a):
         pass
@@ -178,7 +252,11 @@ class H(BaseHTTPRequestHandler):
         STATS["requests"] += 1
         i = STATS["requests"]
 
-        text, info = run(body, self.truncate, self.max_new)
+        text, info = run(body, self.truncate, self.max_new, self.claude_code)
+        if self.dump_prompt:
+            print("[shim] --- rendered prompt ---" + SEP
+                  + (info.get("prompt_text") or "")[:2500]
+                  + SEP + "[shim] --- end prompt ---", flush=True)
         fits = "FITS" if not info["over"] else f"OVER by {info['over']:,}"
         print(f"[shim] req {i}: prompt {info['n_prompt']:,} tok "
               f"(budget {info['budget']:,}) -> {fits}"
@@ -195,6 +273,25 @@ class H(BaseHTTPRequestHandler):
                     f"is {STATE['ctx']} and {self.max_new} are reserved for the "
                     f"reply, leaving {info['budget']}. Over by {info['over']}. "
                     f"Pass --truncate to serve a head-truncated prompt.")}})
+            return
+
+        if self.claude_code:
+            cwd = cli_adapter.extract_cwd(flatten_system(body.get("system")),
+                                          self.cwd)
+            resp, cli_tool, model_tool = cli_adapter.build_response(
+                text, cwd, body.get("model") or "blackwell-nanogpt-85m",
+                f"msg_{i}", info["n_prompt"])
+            if model_tool:
+                print(f"[shim]   model called {model_tool!r} -> "
+                      f"{cli_tool or 'UNMAPPABLE (returned as text)'}",
+                      flush=True)
+            else:
+                print(f"[shim]   no tool call; replied with "
+                      f"{len(text or '')} chars of text", flush=True)
+            if body.get("stream"):
+                self._sse_blocks(resp)
+            else:
+                self._json(200, resp)
             return
 
         if body.get("stream"):
@@ -215,6 +312,52 @@ class H(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+
+    def _sse_blocks(self, resp):
+        """Stream a prebuilt response, including tool_use blocks.
+
+        tool_use arguments go out as input_json_delta on a content block whose
+        `input` starts empty -- sending the populated object in
+        content_block_start is accepted by some clients and ignored by others,
+        which shows up as a tool call with no arguments.
+        """
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+
+        def ev(kind, obj):
+            self.wfile.write(f"event: {kind}\ndata: {json.dumps(obj)}\n\n"
+                             .encode())
+            self.wfile.flush()
+
+        head = dict(resp)
+        head["content"] = []
+        head["stop_reason"] = None
+        ev("message_start", {"type": "message_start", "message": head})
+        for idx, blk in enumerate(resp["content"]):
+            if blk["type"] == "text":
+                ev("content_block_start",
+                   {"type": "content_block_start", "index": idx,
+                    "content_block": {"type": "text", "text": ""}})
+                ev("content_block_delta",
+                   {"type": "content_block_delta", "index": idx,
+                    "delta": {"type": "text_delta", "text": blk["text"]}})
+            else:
+                ev("content_block_start",
+                   {"type": "content_block_start", "index": idx,
+                    "content_block": {"type": "tool_use", "id": blk["id"],
+                                      "name": blk["name"], "input": {}}})
+                ev("content_block_delta",
+                   {"type": "content_block_delta", "index": idx,
+                    "delta": {"type": "input_json_delta",
+                              "partial_json": json.dumps(blk["input"])}})
+            ev("content_block_stop",
+               {"type": "content_block_stop", "index": idx})
+        ev("message_delta", {"type": "message_delta",
+                             "delta": {"stop_reason": resp["stop_reason"]},
+                             "usage": resp["usage"]})
+        ev("message_stop", {"type": "message_stop"})
 
     def _sse(self, text, info):
         self.send_response(200)
@@ -254,12 +397,29 @@ if __name__ == "__main__":
     ap.add_argument("--context", type=int, default=None,
                     help="override the trained max_seq_len; measured safe to "
                          "8192 on this architecture (see load())")
+    ap.add_argument("--claude-code", action="store_true",
+                    help="translate to/from Claude Code's protocol: substitute "
+                         "the model's OWN trained system prompt for the "
+                         "client's, and emit real tool_use blocks so the CLI "
+                         "actually executes the model's calls")
+    ap.add_argument("--cwd", default=os.getcwd(),
+                    help="fallback working directory for resolving the "
+                         "relative paths the model emits")
+    ap.add_argument("--dump-prompt", action="store_true",
+                    help="log the prompt actually rendered for the model; the "
+                         "fastest way to see that a client's scaffolding is "
+                         "still leaking in")
     ap.add_argument("--truncate", action="store_true",
                     help="serve an over-long prompt by dropping its HEAD "
                          "instead of returning an error")
     a = ap.parse_args()
     load(a.ckpt, a.tokenizer, a.context)
     H.truncate, H.max_new = a.truncate, a.max_new
+    H.claude_code, H.cwd = a.claude_code, a.cwd
+    H.dump_prompt = a.dump_prompt
+    if a.claude_code:
+        print(f"[shim] claude-code mode: model's own system prompt, "
+              f"tool_use translation, cwd fallback {a.cwd}", flush=True)
     print(f"[shim] listening on 0.0.0.0:{a.port}  truncate={a.truncate}",
           flush=True)
     ThreadingHTTPServer(("0.0.0.0", a.port), H).serve_forever()
