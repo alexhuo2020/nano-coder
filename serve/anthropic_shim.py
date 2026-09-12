@@ -66,6 +66,7 @@ def codex_adapter_cwd(body, fallback: str) -> str:
 
 SEP = "\n---\n"                  # separator for the --dump-prompt rendering
 DEVICE = ["cuda"]                # set from --device before the model loads
+CHAT_PASSTHROUGH = [False]       # set from --chat-passthrough
 LOCK = threading.Lock()          # one GPU, one decode at a time
 STATE: dict = {}
 STATS = {"requests": 0, "overflow": 0, "served": 0}
@@ -134,6 +135,43 @@ def flatten_content(content) -> str:
     return "\n".join(p for p in parts if p)
 
 
+# A repo task names the thing it is about: a file, the tests, or the act of
+# fixing. A conversational question does none of those. The bar is deliberately
+# LOW -- any hit means agent mode -- because the agent path is the one that
+# works, and mistaking a repo task for chat would break it, whereas mistaking
+# chat for a repo task only reproduces today's behaviour.
+_REPO_TASK = re.compile(
+    r"\.py\b|\btests?\b|\brepo\b|\bfix\b|\bfailing\b|\bpytest\b|\bfunction\b|"
+    r"\bimplement\b|\bdebug\b|\bassert\b|\brun_tests\b|\bsolution\b",
+    re.IGNORECASE)
+
+
+def looks_like_a_repo_task(body) -> bool:
+    """True if this conversation is (or has become) a repository task.
+
+    Any tool traffic already in the transcript settles it: the agent loop is
+    under way and must keep its own system prompt, or the model would lose the
+    convention mid-episode.
+    """
+    for m in body.get("messages") or []:
+        content = m.get("content")
+        if isinstance(content, list):
+            for blk in content:
+                if isinstance(blk, dict) and blk.get("type") in (
+                        "tool_use", "tool_result"):
+                    return True
+    for m in body.get("messages") or []:
+        if m.get("role") != "user":
+            continue
+        text = m.get("content")
+        if not isinstance(text, str):
+            text = " ".join(b.get("text", "") for b in (text or [])
+                            if isinstance(b, dict))
+        if _REPO_TASK.search(text or ""):
+            return True
+    return False
+
+
 def to_chat(body, claude_code: bool = False) -> list:
     """Build the model's message list from an Anthropic request.
 
@@ -150,7 +188,18 @@ def to_chat(body, claude_code: bool = False) -> list:
 
     if claude_code:
         from blackwell_lm.mcp_tools import render_system_prompt
-        msgs.append({"role": chat.SYSTEM, "content": render_system_prompt()})
+        if CHAT_PASSTHROUGH[0] and not looks_like_a_repo_task(body):
+            # A plain question gets the CHAT system prompt the instruction SFT
+            # used, not the agent one. Without this the agent prompt is
+            # injected on every request -- its first line is "You are a coding
+            # agent working in a repository" and its first example is a
+            # read_file call -- so "who are you" is answered by reading
+            # solution.py. The model is not confused; it is doing exactly what
+            # the prompt and its training say to do.
+            msgs.append({"role": chat.SYSTEM, "content": chat.DEFAULT_SYSTEM})
+        else:
+            msgs.append({"role": chat.SYSTEM,
+                         "content": render_system_prompt()})
     else:
         if tools:
             # Outside claude_code mode the schemas are summarised to NAMES
@@ -285,6 +334,20 @@ class H(BaseHTTPRequestHandler):
 
     def log_message(self, *a):
         pass
+
+    def handle_one_request(self):
+        """Swallow client-side disconnects.
+
+        Claude Code opens connections it then closes without sending (probes,
+        keep-alives), and http.server prints a full ConnectionResetError
+        traceback for each one. That looks exactly like a server crash to
+        anyone reading the console, and it is not: the request that matters is
+        logged separately by do_POST.
+        """
+        try:
+            super().handle_one_request()
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            self.close_connection = True
 
     def do_GET(self):
         self._json(200, {"ok": True, "stats": STATS,
@@ -516,6 +579,12 @@ if __name__ == "__main__":
     ap.add_argument("--cwd", default=os.getcwd(),
                     help="fallback working directory for resolving the "
                          "relative paths the model emits")
+    ap.add_argument("--chat-passthrough", action="store_true",
+                    help="answer non-repo questions as CHAT instead of forcing "
+                         "the agent prompt. Without it the agent system prompt "
+                         "is injected on every request, so 'who are you' is "
+                         "answered by reading solution.py -- the model is "
+                         "following the prompt it was given.")
     ap.add_argument("--device", default="cuda", choices=["cuda", "cpu"],
                     help="cpu runs the 85M model in fp32 with no GPU and no "
                          "Transformer Engine (its import is already optional)")
@@ -531,6 +600,7 @@ if __name__ == "__main__":
                          "instead of returning an error")
     a = ap.parse_args()
     DEVICE[0] = a.device
+    CHAT_PASSTHROUGH[0] = a.chat_passthrough
     load(a.ckpt, a.tokenizer, a.context)
     H.truncate, H.max_new = a.truncate, a.max_new
     H.claude_code, H.cwd = a.claude_code, a.cwd
