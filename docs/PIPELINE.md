@@ -164,16 +164,16 @@ CPU** (4.5 tok/s, ~340 MB RAM, no Transformer Engine needed).
 
 ## Reproducing on one GPU
 
-Rough costs from the real runs, RTX PRO 4500 spot (~$0.75/h):
+Wall clock from the real runs on a single 32 GB consumer GPU:
 
 | stage | wall clock | note |
 |---|---|---|
-| pretrain 20.4B tokens | ~3 days | the expensive part |
+| pretrain 20.4B tokens | ~3 days | by far the longest |
 | SFT | ~10 min | 4,000 steps |
 | GRPO | ~1 h | |
 | agentic RL | ~2 h | 400 steps × 8 episodes |
 | scoreboard (4 tiers) | ~25 min | 120 episodes/tier |
 
-Total for the project was ~$180 including all probes and re-runs. **Skip
-pretraining** and start from a released base model if you only want the
-post-training stages — that is what the pipeline was built to be pointed at.
+**Skip pretraining** and start from a released base model if you only want the
+post-training stages — that is what the pipeline was built to be pointed at,
+and it turns a three-day run into an afternoon.

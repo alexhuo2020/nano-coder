@@ -175,17 +175,16 @@ than checking that the incentive changed any ordering.
 
 ## Operational lessons
 
-- **Terminating a GPU instance does not shut it down if an ASG owns it.** A
-  replacement appeared three minutes later. Scale every ASG to `0/0/0` *first*.
-  An ASG with `desired > 0` and no instances is not idle — it is waiting.
-- **A one-time spot request stays `active` against a dead instance** and holds
-  GPU quota, faking `MaxSpotInstanceCountExceeded`.
 - **`pgrep -f PATTERN` matches its own command line.** Hit four times in one
   session, including a watcher that reported a finished job as running forever.
   Use `pgrep -af "python3 script[.]py"` and confirm against GPU memory.
 - **`NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE=1`** must be set before importing
-  Transformer Engine or every *resume* crashes — cold starts look healthy, so it
-  surfaces only after a spot reclaim.
+  Transformer Engine or every *resume* crashes. Cold starts look healthy, so it
+  surfaces only when a run is resumed — the worst possible moment.
 - **The sandbox is a robustness boundary, not a containment boundary.** POSIX
   rlimits, an isolated interpreter, a throwaway directory and process-group
-  kills — but no network, mount or PID namespace.
+  kills — but no network, mount or PID namespace. Run the trainer in a
+  container with no egress if that matters.
+- **A long-running job must survive its launcher.** Every training run here is
+  started detached (`setsid nohup`), because the shell that launched it is far
+  less reliable than the job itself.

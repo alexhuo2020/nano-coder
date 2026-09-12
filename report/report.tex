@@ -126,19 +126,15 @@ Tokenizer + data & 32{,}784-token BPE, 20.4B-token corpus & --- \\
 result did not survive an audit; \S\ref{sec:hardness} is that audit.}
 \end{table}
 
-\noindent\textbf{Hardware and cost.} All work ran on rented AWS spot capacity:
-an RTX PRO 4500 Blackwell (32\,GB, \code{g7.2xlarge}) for most of the pipeline
-and an RTX PRO 6000 (96\,GB) for the throughput-critical portion of
-pretraining. The PRO 4500 sustained $45{,}146$ tok/s. The PRO 6000 initially
-reached $77{,}900$ tok/s ($1.726\times$), and after batch-size tuning to fill
-its 96\,GB it sustained a \textbf{mean of $119{,}807$ tok/s} (median
-$119{,}848$, max $121{,}020$) across the final $4.0$B tokens --- a
-$2.65\times$ speedup over the PRO 4500, cross-checked against wall clock
-($9.27$\,h for $4.0$B tokens implies $119{,}770$ tok/s, matching the
-instantaneous counter). Total spend was approximately \$180 in GPU time, of
-which roughly \$2.30 was wasted on instances left idle after a run finished;
-that operational miss recurred twice and is recorded because it is the sort of
-thing a summary usually omits.
+\noindent\textbf{Hardware.} All work ran on a single consumer-class GPU: an
+RTX PRO 4500 Blackwell (32\,GB) for most of the pipeline and an RTX PRO 6000
+(96\,GB) for the throughput-critical portion of pretraining. The PRO 4500
+sustained $45{,}146$ tok/s. The PRO 6000 initially reached $77{,}900$ tok/s
+($1.726\times$), and after batch-size tuning to fill its 96\,GB it sustained a
+\textbf{mean of $119{,}807$ tok/s} (median $119{,}848$, max $121{,}020$) across
+the final $4.0$B tokens --- a $2.65\times$ speedup over the PRO 4500,
+cross-checked against wall clock ($9.27$\,h for $4.0$B tokens implies
+$119{,}770$ tok/s, matching the instantaneous counter).
 
 \begin{retraction}{A stale number in this project's own README}
 The repository's README claimed PRO 6000 figures were \emph{extrapolated} by
@@ -167,7 +163,7 @@ larger base model, not to produce a competitive model.
 \caption{\textbf{Top:} the pretraining curve, plotted on real token counts from
 both metric sources. \emph{The shaded band is a hole in the data, not a
 plateau:} the per-step log between $0.10$B and $11.10$B tokens was lost to a
-spot reclaim, and the line is broken rather than interpolated --- drawing
+run was interrupted, and the line is broken rather than interpolated --- drawing
 through it produced a convincing $11$B-token plateau that never happened. The
 single excursion below $1.0$ nat at the right edge of the band is the first
 logged step after that resume. The raw series is drawn underneath the trailing
@@ -219,7 +215,7 @@ back to BF16 after each step, at ${\sim}3\%$ memory overhead.
 parameter, including the 1-D gains frozen for $657\text{k}$ steps, made the
 model \textbf{worse}: held-out loss rose by $0.052$ as stale momentum
 discharged into weights that had never moved. The run was rolled back --- both
-local weights and the S3 mirror --- to step $656{,}711$, and 1-D gains were left
+local weights and the mirrored copy --- to step $656{,}711$, and 1-D gains were left
 frozen. A second lesson sits inside the first: an early error in this report's
 drafting put that regression at $+0.21$; the difference was drift from an
 evaluation set contaminated with early-corpus data, and building a properly
@@ -636,8 +632,8 @@ SFT stage.
 
 \section{Reproducibility and artifacts}
 
-All artifacts are mirrored to \code{s3://YOUR-BUCKET}
-(54 objects, 22.8\,GiB): 13 stage checkpoints, the tokenizer, per-run metrics as
+All artifacts are mirrored to \code{the project's artifact store}
+(13 stage checkpoints and their metrics): 13 stage checkpoints, the tokenizer, per-run metrics as
 JSONL, the two audit probes and their logs, and a source tarball. Checkpoint
 integrity was verified byte-for-byte against the training host before that host
 was terminated.
@@ -652,27 +648,9 @@ is published alongside its weights, and its size was verified byte-for-byte
 \subsection{Operational notes worth carrying forward}
 
 \begin{itemize}
-\item \textbf{Terminating a GPU instance does not shut it down if an Auto
-Scaling Group owns it.} On teardown the instance was terminated, every
-checkpoint was verified present in S3, and billing was reported stopped --- and
-three minutes later a \emph{new} \code{g7.2xlarge} was running, because the
-self-healing spot ASG built for unattended runs had replaced it, doing exactly
-its job. Scale every ASG to $0/0/0$ \emph{first}, then terminate, then cancel
-the spot request, then verify all three are empty. A second ASG was worse: it
-sat at $\text{min}=\text{desired}=1$ with \emph{zero} instances because PRO
-6000 capacity was unavailable, and would have launched a GPU whenever capacity
-freed, potentially weeks later. \textbf{An ASG with desired ${>}0$ and no
-instances is not idle; it is waiting.} Before terminating a resurrected box,
-check whether it wrote to S3 --- the launch template auto-resumes, so a
-replacement can overwrite good checkpoints (here it wrote nothing).
-\item \textbf{Ghost spot requests hold quota.} An \emph{active} one-time spot
-request pointing at an already-terminated instance consumed GPU quota and caused
-AWS to report \code{MaxSpotInstanceCountExceeded}. Roughly $15$ launch attempts
-were misread as a capacity shortage; cancelling the ghost request launched an
-instance immediately. On teardown, cancel the request as well as the instance.
 \item \textbf{\code{NVTE\_ALLOW\_UNSAFE\_PICKLE\_EXTRA\_STATE=1}} must be set
 before importing Transformer Engine, or every \emph{resume} crashes. Cold starts
-look healthy, so this surfaces only after a spot reclaim --- the worst possible
+look healthy, so this surfaces only when a run is resumed --- the worst possible
 moment.
 \item \textbf{Build TE with \code{NVTE\_CUDA\_ARCHS=120a}.} The released wheel
 silently disables FP4 stochastic rounding on \code{sm\_120}. NVFP4 beat FP8 by

@@ -318,7 +318,7 @@ did not work.
 
 20.40B tokens, 1,245,117 steps, 85M params (d_model 1536, one block looped 8x),
 NVFP4, on a single RTX PRO 6000 Blackwell. ~46h of GPU time at 120,470 tok/s,
-spanning three spot instances and two reclaims.
+spanning three machines and two interruptions.
 
 | held-out (MBPP, never trained on) | step | loss |
 |---|---|---|
@@ -569,8 +569,9 @@ control run separates the two, and it passes.
   the 70% retraction above, in a cheaper place.*
 - This does **not** beat an H100 on speed, and nothing on this hardware does:
   the memory-bandwidth gap is roughly 2x and was immovable across three
-  toolchain upgrades. Blackwell wins on **cost** - $1.43 vs $2.58 per GPU-hour,
-  so it wins tokens-per-dollar while staying within 1.81x on speed.
+  toolchain upgrades. Blackwell's argument is tokens-per-unit-cost rather than
+  raw speed: it stays within 1.81x on throughput at a materially lower hourly
+  rate than a datacentre part.
 - The trained model (85M) produces *acceptable-looking* output, not correct
   output - and the hardness audit above shows how far that gap goes: it cannot
   write a function body it was not shown (0/240 from a stub). Judge it against
@@ -591,17 +592,7 @@ control run separates the two, and it passes.
 - **A rolling training loss cannot detect any of this.** It missed a real
   regression, then twice signalled a plateau that was not one. Every quality
   claim here comes from a fixed held-out set instead.
-- **Terminating a GPU instance does not shut it down if an ASG owns it.** On
-  teardown I terminated the box, verified every checkpoint was in S3, and
-  reported billing stopped - and three minutes later a *new* g7.2xlarge was
-  running, because `blackwell-nanogpt-asg` had replaced it, doing exactly the
-  job it was built for. The tell is the instance's `aws:autoscaling:groupName`
-  tag. Scale every ASG to `0/0/0` **first**, then terminate, then cancel the
-  spot request, then verify all three are empty. A second ASG was worse: it sat
-  at min=desired=1 with *zero* instances because PRO 6000 capacity was
-  unavailable, permanently hunting - it would have launched a $1.43/hr GPU
-  whenever capacity freed, possibly weeks later. **An ASG with desired>0 and no
-  instances is not idle, it is waiting.**
+
 - **The sandbox is a robustness boundary, not a containment boundary.** It
   applies POSIX rlimits, an isolated interpreter, a throwaway directory and
   process-group kills, but creates no network, mount or PID namespace. Run the

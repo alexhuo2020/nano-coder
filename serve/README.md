@@ -76,9 +76,10 @@ python -m venv C:\Users\<you>\bn
 C:\Users\<you>\bn\Scripts\python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cpu
 C:\Users\<you>\bn\Scripts\python.exe -m pip install tokenizers numpy pytest
 
-# 2. the weights
-aws s3 cp s3://YOUR-BUCKET/sft_v2/sft_ctl.pt local/sft_ctl.pt
-aws s3 cp s3://YOUR-BUCKET/blackwell_nanogpt_tokenizer.json local/tokenizer.json
+# 2. the weights: put the checkpoint and its tokenizer in local/
+#    (a checkpoint is ~1.1 GB; the tokenizer ~2 MB)
+#    THE TOKENIZER IS LOAD-BEARING: a different one loads without error and
+#    produces nonsense, so use the one published with the weights.
 
 # 3. serve on CPU
 C:\Users\<you>\bn\Scripts\python.exe serve/anthropic_shim.py \
