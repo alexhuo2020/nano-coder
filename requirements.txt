@@ -1,0 +1,16 @@
+# Inference and the CPU path need only these.
+torch>=2.4          # CPU wheel is fine: --index-url https://download.pytorch.org/whl/cpu
+tokenizers>=0.15
+numpy>=1.24
+
+# Training and evaluation additionally need:
+# datasets>=2.16    # streaming the pretraining / SFT corpora
+# pytest>=7         # the repo scenarios' grader
+
+# Transformer Engine is OPTIONAL and CUDA-only. model.py catches its absence
+# and falls back to nn.Linear, which is what makes CPU inference work. For the
+# NVFP4 training path on sm_120 it must be built from source:
+#   NVTE_FRAMEWORK=pytorch NVTE_CUDA_ARCHS=120a NVTE_WITH_NCCL_EP=0 \
+#     pip install --no-build-isolation \
+#     "transformer_engine[pytorch] @ git+https://github.com/NVIDIA/TransformerEngine.git@main"
+# The released wheel silently disables FP4 stochastic rounding on sm_120.

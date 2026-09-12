@@ -173,10 +173,10 @@ def test_cwd_extraction():
     # naming the wrong file.
     real = ("# Environment\nYou have been invoked in the following "
             "environment: \n - Primary working directory: "
-            "C:\\Users\\E20263395\\apps\\blackwell-nanogpt\n"
+            "C:\\Users\\USER\\apps\\blackwell-nanogpt\n"
             " - Is a git repository: true\n - Platform: win32\n")
     assert A.extract_cwd(real, "/fb") == \
-        "C:\\Users\\E20263395\\apps\\blackwell-nanogpt", A.extract_cwd(real, "/fb")
+        "C:\\Users\\USER\\apps\\blackwell-nanogpt", A.extract_cwd(real, "/fb")
 
     # a path containing spaces must not be truncated at the first one
     spaced = " - Primary working directory: C:\\Program Files\\my proj\n - x\n"

@@ -77,8 +77,8 @@ C:\Users\<you>\bn\Scripts\python.exe -m pip install torch --index-url https://do
 C:\Users\<you>\bn\Scripts\python.exe -m pip install tokenizers numpy pytest
 
 # 2. the weights
-aws s3 cp s3://nova-moe-checkpoints-045064753427/sft_v2/sft_ctl.pt local/sft_ctl.pt
-aws s3 cp s3://nova-moe-checkpoints-045064753427/blackwell_nanogpt_tokenizer.json local/tokenizer.json
+aws s3 cp s3://YOUR-BUCKET/sft_v2/sft_ctl.pt local/sft_ctl.pt
+aws s3 cp s3://YOUR-BUCKET/blackwell_nanogpt_tokenizer.json local/tokenizer.json
 
 # 3. serve on CPU
 C:\Users\<you>\bn\Scripts\python.exe serve/anthropic_shim.py \

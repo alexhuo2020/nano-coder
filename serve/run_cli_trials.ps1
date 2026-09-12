@@ -15,7 +15,7 @@ $env:ANTHROPIC_MODEL = "blackwell-nanogpt-85m"
 $env:CLAUDE_CODE_MAX_CONTEXT_TOKENS = "200000"
 $env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"
 
-$d = "C:\Users\E20263395\AppData\Local\Temp\bnano_demo"
+$d = "C:\Users\USER\AppData\Local\Temp\bnano_demo"
 Set-Location $d
 
 @'

@@ -1,5 +1,5 @@
 [shim] loaded sft_ctl.pt  d_model=1536 n_loops=8 context=4096
-[shim] claude-code mode: model's own system prompt, tool_use translation, cwd fallback C:\Users\E20263395\AppData\Local\Temp\bnano_local
+[shim] claude-code mode: model's own system prompt, tool_use translation, cwd fallback C:\Users\USER\AppData\Local\Temp\bnano_local
 [shim] listening on 0.0.0.0:8799  truncate=True
 [shim] req 1: prompt 203 tok (budget 3,840) -> FITS, 4.31s
 [shim]   model called 'read_file' -> Read
@@ -100,10 +100,10 @@ Traceback (most recent call last):
   File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\http\server.py", line 435, in handle_one_request
     method()
     ~~~~~~^^
-  File "C:\Users\E20263395\apps\blackwell-nanogpt\serve\anthropic_shim.py", line 346, in do_POST
+  File "C:\Users\USER\apps\blackwell-nanogpt\serve\anthropic_shim.py", line 346, in do_POST
     self._sse_blocks(resp)
     ~~~~~~~~~~~~~~~~^^^^^^
-  File "C:\Users\E20263395\apps\blackwell-nanogpt\serve\anthropic_shim.py", line 438, in _sse_blocks
+  File "C:\Users\USER\apps\blackwell-nanogpt\serve\anthropic_shim.py", line 438, in _sse_blocks
     self.end_headers()
     ~~~~~~~~~~~~~~~~^^
   File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\http\server.py", line 549, in end_headers
@@ -137,10 +137,10 @@ Traceback (most recent call last):
   File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\http\server.py", line 435, in handle_one_request
     method()
     ~~~~~~^^
-  File "C:\Users\E20263395\apps\blackwell-nanogpt\serve\anthropic_shim.py", line 346, in do_POST
+  File "C:\Users\USER\apps\blackwell-nanogpt\serve\anthropic_shim.py", line 346, in do_POST
     self._sse_blocks(resp)
     ~~~~~~~~~~~~~~~~^^^^^^
-  File "C:\Users\E20263395\apps\blackwell-nanogpt\serve\anthropic_shim.py", line 438, in _sse_blocks
+  File "C:\Users\USER\apps\blackwell-nanogpt\serve\anthropic_shim.py", line 438, in _sse_blocks
     self.end_headers()
     ~~~~~~~~~~~~~~~~^^
   File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\http\server.py", line 549, in end_headers
