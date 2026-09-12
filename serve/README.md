@@ -31,6 +31,25 @@ pass@1, 10.8% pass@4. A weak coder in absolute terms.
 Every number above is on HELD-OUT tasks. On tasks it trained on the same model
 scores 78.5% mean — that gap is memorisation, and it is why the split exists.
 
+## Why a plain question made it read `solution.py`
+
+In `--claude-code` mode the server injects the AGENT system prompt on every
+request — it opens with *"You are a coding agent working in a repository"* and
+its first example is a `read_file` call. Half the SFT was repo trajectories
+that always begin with `read_file`. So "who are you" was answered by reading a
+file: the model was following its prompt, not malfunctioning.
+
+`--chat-passthrough` routes requests with no repo signal (no file, test, fix or
+function mentioned, and no tool traffic yet) to the chat prompt instead.
+Verified: "who are you" now returns text; "solution.py is failing its tests"
+still returns a tool call.
+
+**This does not make it conversational.** Asked who it is, it replies with an
+unrelated Python function — its chat prompt says *"answer with runnable
+Python"* and 100% of its SFT taught it to emit code. The routing is correct;
+the model is a code model. Treat chat mode as a way to avoid a confusing
+behaviour, not as a feature.
+
 ## What it is actually good at
 
 One task shape, the one it was trained on:
@@ -64,7 +83,7 @@ aws s3 cp s3://nova-moe-checkpoints-045064753427/blackwell_nanogpt_tokenizer.jso
 # 3. serve on CPU
 C:\Users\<you>\bn\Scripts\python.exe serve/anthropic_shim.py \
   --ckpt local/sft_ctl.pt --tokenizer local/tokenizer.json \
-  --device cpu --port 8799 --context 4096 --claude-code --truncate \
+  --device cpu --port 8799 --context 4096 --claude-code --truncate \n  --chat-passthrough \
   --temperature 0.2 --cwd 'C:\path\to\your\repo'
 ```
 
