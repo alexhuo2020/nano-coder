@@ -8,7 +8,7 @@
 # model_providers.bnano.sandbox_mode -- accepted without complaint, and with
 # no effect.
 
-model = "blackwell-nanogpt-85m"
+model = "nano-coder-85m"
 model_provider = "bnano"
 
 # The CLI ran as "sandbox: read-only" despite --sandbox on the exec
@@ -17,7 +17,7 @@ sandbox_mode = "workspace-write"
 approval_policy = "never"
 
 [model_providers.bnano]
-name = "blackwell-nanogpt local shim"
+name = "nano-coder local shim"
 base_url = "http://127.0.0.1:8788/v1"
 wire_api = "responses"
 env_key = "BNANO_API_KEY"

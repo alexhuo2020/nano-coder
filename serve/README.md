@@ -1,4 +1,4 @@
-# Serving blackwell-nanogpt to a coding CLI
+# Serving nano-coder to a coding CLI
 
 Drives **Claude Code** or **Codex CLI** with the local 85M checkpoint. No
 Anthropic or OpenAI model is involved at any point — the only weights are the
@@ -136,7 +136,7 @@ ssh -i KEY -N -L 8788:127.0.0.1:8788 ubuntu@HOST
 ```bash
 export ANTHROPIC_BASE_URL=http://127.0.0.1:8788
 export ANTHROPIC_AUTH_TOKEN=dummy-local-shim      # not a real key; nothing leaves the machine
-export ANTHROPIC_MODEL=blackwell-nanogpt-85m
+export ANTHROPIC_MODEL=nano-coder-85m
 export CLAUDE_CODE_MAX_CONTEXT_TOKENS=200000      # see the warning below
 claude -p "The file solution.py in this repo is failing its tests. Read it, fix it, and verify with run_tests." \
   --max-turns 8 --permission-mode bypassPermissions

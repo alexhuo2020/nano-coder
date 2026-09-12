@@ -1,4 +1,4 @@
-# blackwell-nanogpt
+# nano-coder
 
 **A complete, honest, reproducible pipeline for training a coding agent — small
 enough to read end to end.**
@@ -100,7 +100,7 @@ Then point Claude Code at it:
 ```bash
 export ANTHROPIC_BASE_URL=http://127.0.0.1:8799
 export ANTHROPIC_AUTH_TOKEN=dummy-local
-export ANTHROPIC_MODEL=blackwell-nanogpt-85m
+export ANTHROPIC_MODEL=nano-coder-85m
 export CLAUDE_CODE_MAX_CONTEXT_TOKENS=200000     # must be LARGE — see serve/README.md
 claude -p "The file solution.py in this repo is failing its tests. Read it, fix it, and verify with run_tests."
 ```

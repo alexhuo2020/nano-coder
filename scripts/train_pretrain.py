@@ -1,4 +1,4 @@
-"""Pretraining for blackwell-nanogpt.
+"""Pretraining for nano-coder.
 
 Budgeted by TOKENS, not steps, because tokens/param is the quantity that decides
 whether the result is coherent -- and the failure this project exists to avoid is

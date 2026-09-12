@@ -396,7 +396,7 @@ class H(BaseHTTPRequestHandler):
             cwd = cli_adapter.extract_cwd(flatten_system(body.get("system")),
                                           self.cwd)
             resp, cli_tool, model_tool = cli_adapter.build_response(
-                text, cwd, body.get("model") or "blackwell-nanogpt-85m",
+                text, cwd, body.get("model") or "nano-coder-85m",
                 f"msg_{i}", info["n_prompt"])
             if model_tool:
                 print(f"[shim]   model called {model_tool!r} -> "
@@ -416,7 +416,7 @@ class H(BaseHTTPRequestHandler):
         else:
             self._json(200, {
                 "id": f"msg_{i}", "type": "message", "role": "assistant",
-                "model": body.get("model") or "blackwell-nanogpt-85m",
+                "model": body.get("model") or "nano-coder-85m",
                 "content": [{"type": "text", "text": text}],
                 "stop_reason": "end_turn", "stop_sequence": None,
                 "usage": {"input_tokens": info["n_prompt"],
@@ -462,7 +462,7 @@ class H(BaseHTTPRequestHandler):
 
         cwd = codex_adapter_cwd(body, self.cwd)
         events, codex_tool, model_tool = codex_adapter.build_events(
-            text, cwd, body.get("model") or "blackwell-nanogpt-85m",
+            text, cwd, body.get("model") or "nano-coder-85m",
             cli_adapter.split_model_output)
         print(f"[shim] codex req {i}: prompt {n:,} tok "
               f"(budget {budget:,}) -> {'FITS' if n < budget else 'TRUNCATED'}"
@@ -546,7 +546,7 @@ class H(BaseHTTPRequestHandler):
 
         ev("message_start", {"type": "message_start", "message": {
             "id": "msg_stream", "type": "message", "role": "assistant",
-            "model": "blackwell-nanogpt-85m", "content": [],
+            "model": "nano-coder-85m", "content": [],
             "stop_reason": None,
             "usage": {"input_tokens": info["n_prompt"], "output_tokens": 0}}})
         ev("content_block_start", {"type": "content_block_start", "index": 0,
