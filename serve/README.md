@@ -83,7 +83,8 @@ aws s3 cp s3://nova-moe-checkpoints-045064753427/blackwell_nanogpt_tokenizer.jso
 # 3. serve on CPU
 C:\Users\<you>\bn\Scripts\python.exe serve/anthropic_shim.py \
   --ckpt local/sft_ctl.pt --tokenizer local/tokenizer.json \
-  --device cpu --port 8799 --context 4096 --claude-code --truncate \n  --chat-passthrough \
+  --device cpu --port 8799 --context 4096 --claude-code --truncate \
+  --chat-passthrough \
   --temperature 0.2 --cwd 'C:\path\to\your\repo'
 ```
 
