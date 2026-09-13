@@ -212,7 +212,7 @@ each is now either impossible by construction or caught by a test.
 - **Prompt-format drift between SFT and RL.** SFT trained with role markers
   while the rollout path encoded the bare question, so the policy was asked to
   continue a format it had never seen. Nothing crashed; reward was simply always
-  zero, and it read as an RL-tuning problem for days. `blackwell_lm/chat.py` is
+  zero, and it read as an RL-tuning problem for days. `nanocoder/chat.py` is
   now the single source of truth, and a test asserts the rollout prompt is a
   token-for-token **prefix** of the trained sequence.
 - **An unnormalised KL.** With a length-normalised ratio and an unnormalised
@@ -258,18 +258,18 @@ each is now either impossible by construction or caught by a test.
 ## Layout
 
 ```
-blackwell_lm/model.py        the model (measured design decisions cited inline)
-blackwell_lm/tokenizer.py    code-aware BPE (3.63 vs GPT-2's 2.60 chars/token)
-blackwell_lm/data.py         streaming code-heavy mixture + FIM + packing
-blackwell_lm/chat.py         conversation format: ONE source of truth
-blackwell_lm/generate.py     KV-cache decode + log-prob scoring
-blackwell_lm/sft.py          instruction data -> (ids, targets, loss_mask)
-blackwell_lm/sandbox.py      executes untrusted model-written code
-blackwell_lm/reward.py       execution reward, partial credit
-blackwell_lm/grpo.py         GSPO ratio, k3 KL, Clip-Higher
-blackwell_lm/agent.py        multi-turn tool-use episodes
-blackwell_lm/tasks.py        MBPP + a deliberately trivial control set
-blackwell_lm/checkpoint.py   stage/precision transitions
+nanocoder/model.py        the model (measured design decisions cited inline)
+nanocoder/tokenizer.py    code-aware BPE (3.63 vs GPT-2's 2.60 chars/token)
+nanocoder/data.py         streaming code-heavy mixture + FIM + packing
+nanocoder/chat.py         conversation format: ONE source of truth
+nanocoder/generate.py     KV-cache decode + log-prob scoring
+nanocoder/sft.py          instruction data -> (ids, targets, loss_mask)
+nanocoder/sandbox.py      executes untrusted model-written code
+nanocoder/reward.py       execution reward, partial credit
+nanocoder/grpo.py         GSPO ratio, k3 KL, Clip-Higher
+nanocoder/agent.py        multi-turn tool-use episodes
+nanocoder/tasks.py        MBPP + a deliberately trivial control set
+nanocoder/checkpoint.py   stage/precision transitions
 scripts/test_model_cpu.py       11 model correctness tests
 scripts/test_data_cpu.py         5 data-pipeline tests
 scripts/test_posttrain_cpu.py   18 format/generation/GRPO/SFT tests
@@ -444,8 +444,8 @@ Two design rules this produced, both learned the expensive way:
 ### The repo environment (MCP-shaped tools)
 
 The task above is still "emit a snippet, we run it", which teaches a convention
-that transfers to no real coding agent. `blackwell_lm/mcp_tools.py` and
-`blackwell_lm/scenario.py` replace it with a scratch REPO the agent must
+that transfers to no real coding agent. `nanocoder/mcp_tools.py` and
+`nanocoder/scenario.py` replace it with a scratch REPO the agent must
 navigate:
 
   * tools are declared MCP-style -- `name`, `description`, `input_schema`
@@ -586,7 +586,7 @@ control run separates the two, and it passes.
   bf16 params, but an AdamW update below the bf16 spacing rounds away entirely:
   pretraining ran 657,000 steps with all five RMSNorm gains still bit-exactly
   1.0, and at the post-training learning rates only 8% (SFT) and 2% (GRPO) of
-  elements could move at all. `blackwell_lm/optim.py` keeps fp32 masters for
+  elements could move at all. `nanocoder/optim.py` keeps fp32 masters for
   ~3% overhead. Naively unfreezing the frozen gains mid-run made things WORSE
   (stale momentum discharged; held-out loss +0.052), so 1-D gains stay frozen.
 - **A rolling training loss cannot detect any of this.** It missed a real

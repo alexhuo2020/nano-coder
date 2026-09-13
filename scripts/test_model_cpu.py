@@ -1,10 +1,18 @@
-"""CPU correctness tests for blackwell_lm.model. No GPU, no TE -- the FP8 path
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+import os
+"""CPU correctness tests for nanocoder.model. No GPU, no TE -- the FP8 path
 falls back to nn.Linear, which leaves the shapes, masking, GQA wiring and KV
 cache exactly as they run on the GPU. Plain asserts, __main__ runner.
 """
 import torch
 
-from blackwell_lm.model import BlackwellLM, ModelConfig
+from nanocoder.model import BlackwellLM, ModelConfig
 
 
 def _cfg(**kw):

@@ -1,4 +1,4 @@
-"""Measure real training tokens/s for blackwell_lm on the local GPU, and A/B
+"""Measure real training tokens/s for nanocoder on the local GPU, and A/B
 the precision choice the model's design rests on (FP8 vs BF16 vs, if TE was
 built for the right arch, NVFP4).
 
@@ -10,7 +10,7 @@ import time
 
 import torch
 
-from blackwell_lm.model import BlackwellLM, ModelConfig
+from nanocoder.model import BlackwellLM, ModelConfig
 
 
 def run(cfg, precision, batch, steps, warmup):

@@ -167,7 +167,7 @@ distinguished.**
 ## Repository layout
 
 ```
-blackwell_lm/     model, tokenizer, data, chat format, sandbox
+nanocoder/     model, tokenizer, data, chat format, sandbox
                   optim.py      fp32 master weights (bf16 params lose updates)
                   scenario.py   verified-broken repo tasks, 4 difficulty tiers
                   repo_agent.py multi-turn episodes; reward reads the FILE

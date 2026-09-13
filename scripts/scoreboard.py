@@ -12,6 +12,13 @@ earning ANY partial credit (the quantity that decides whether RL can run at
 all -- zero partial credit means every GRPO group is zero-variance), and what
 the agent actually left in the file.
 """
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 from __future__ import annotations
 
 import argparse
@@ -22,17 +29,14 @@ import random
 import shutil
 import sys
 
-os.environ.setdefault("NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE", "1")
-sys.path.insert(0, "/home/ubuntu/bnano")
+os.environ.setdefault("NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE", "1")import torch
 
-import torch
-
-from blackwell_lm.checkpoint import load_stage_checkpoint
-from blackwell_lm.model import BlackwellLM, ModelConfig
-from blackwell_lm.repo_agent import run_repo_episode
-from blackwell_lm.scenario import build_scenarios
-from blackwell_lm.tasks import get_tasks
-from blackwell_lm.tokenizer import EOS, load_tokenizer
+from nanocoder.checkpoint import load_stage_checkpoint
+from nanocoder.model import BlackwellLM, ModelConfig
+from nanocoder.repo_agent import run_repo_episode
+from nanocoder.scenario import build_scenarios
+from nanocoder.tasks import get_tasks
+from nanocoder.tokenizer import EOS, load_tokenizer
 
 
 def main():

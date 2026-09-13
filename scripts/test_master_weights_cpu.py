@@ -1,3 +1,11 @@
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+import os
 """Regression test for the lost-update bug: bf16 parameters cannot be the
 optimizer's state.
 
@@ -19,7 +27,7 @@ test cannot silently stop testing anything), and that fp32 masters fix it.
 """
 import torch
 
-from blackwell_lm.model import BlackwellLM, ModelConfig
+from nanocoder.model import BlackwellLM, ModelConfig
 
 NORM_KEYS = ("blocks.0.n1.weight", "blocks.0.n2.weight", "norm.weight")
 
@@ -144,7 +152,7 @@ def test_master_optimizer_works_at_post_training_learning_rates():
     every reward, and update no weight, which looks exactly like the far more
     famous zero-variance-group failure.
     """
-    from blackwell_lm.optim import MasterWeightOptimizer
+    from nanocoder.optim import MasterWeightOptimizer
 
     for lr in (1e-5, 1e-6):
         # naive: bf16 params updated in place

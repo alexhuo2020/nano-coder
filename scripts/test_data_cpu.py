@@ -1,3 +1,11 @@
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+import os
 """CPU tests for the data pipeline. Uses a tiny locally-trained tokenizer and a
 synthetic document stream -- no network, no GPU. These check the properties that
 would silently corrupt a multi-day run if wrong.
@@ -6,8 +14,8 @@ import random
 
 import numpy as np
 
-from blackwell_lm.data import batches, packed_blocks, prefetch
-from blackwell_lm.tokenizer import (EOS, FIM_MIDDLE, FIM_PREFIX, FIM_SUFFIX,
+from nanocoder.data import batches, packed_blocks, prefetch
+from nanocoder.tokenizer import (EOS, FIM_MIDDLE, FIM_PREFIX, FIM_SUFFIX,
                                     fim_transform, train_tokenizer)
 
 CORPUS = [

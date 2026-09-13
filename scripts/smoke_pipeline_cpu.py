@@ -1,3 +1,11 @@
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+import os
 """End-to-end smoke test of the whole post-training pipeline on CPU.
 
 The unit tests check each piece; this checks that the pieces are WIRED. It runs a
@@ -15,15 +23,15 @@ in test_sandbox_cpu.py.
 
 import torch
 
-from blackwell_lm import chat
-from blackwell_lm.agent import ToolBox, episode_reward, run_episode
-from blackwell_lm.generate import completion_logprobs, generate
-from blackwell_lm.grpo import GRPOConfig, group_advantages, grpo_objective
-from blackwell_lm.model import BlackwellLM, ModelConfig
-from blackwell_lm.reward import code_reward
-from blackwell_lm.sft import masked_cross_entropy
-from blackwell_lm.tasks import get_tasks
-from blackwell_lm.tokenizer import EOS, train_tokenizer
+from nanocoder import chat
+from nanocoder.agent import ToolBox, episode_reward, run_episode
+from nanocoder.generate import completion_logprobs, generate
+from nanocoder.grpo import GRPOConfig, group_advantages, grpo_objective
+from nanocoder.model import BlackwellLM, ModelConfig
+from nanocoder.reward import code_reward
+from nanocoder.sft import masked_cross_entropy
+from nanocoder.tasks import get_tasks
+from nanocoder.tokenizer import EOS, train_tokenizer
 
 CORPUS = [
     "def add(a, b):\n    return a + b\n",

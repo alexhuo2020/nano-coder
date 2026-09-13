@@ -24,7 +24,7 @@ from typing import Iterator, List
 
 import numpy as np
 
-from blackwell_lm.chat import (ASSISTANT, DEFAULT_SYSTEM, SYSTEM, TOOL, USER,
+from nanocoder.chat import (ASSISTANT, DEFAULT_SYSTEM, SYSTEM, TOOL, USER,
                                 tokenize_conversation)
 
 

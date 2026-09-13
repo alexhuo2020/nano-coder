@@ -123,7 +123,7 @@ def test_round_trip_back_into_the_models_format():
 def test_parser_is_the_trained_one():
     """Guards against someone reintroducing a private regex: the adapter must
     agree with the harness that trained the model."""
-    from blackwell_lm.agent import parse_tool_call
+    from nanocoder.agent import parse_tool_call
     text = fence({"name": "read_file", "args": {"path": "x.py"}})
     assert A.split_model_output(text)[1] == parse_tool_call(text)
     print("adapter and training harness share one parser: PASS")

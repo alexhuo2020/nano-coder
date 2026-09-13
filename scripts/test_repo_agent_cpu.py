@@ -5,18 +5,25 @@ merely functional: that the "broken" code is verified broken, that the reward
 reads the FILE rather than the transcript, that paths cannot escape the repo,
 and that each episode gets an independent copy of the repo.
 """
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import os
 import textwrap
 import random
 
 import torch
 
-from blackwell_lm.mcp_tools import TOOLS, RepoToolBox, render_system_prompt
-from blackwell_lm.model import BlackwellLM, ModelConfig
-from blackwell_lm.repo_agent import repo_reward, run_repo_episode
-from blackwell_lm.scenario import build_scenario, build_scenarios, cleanup
-from blackwell_lm.tasks import EASY_TASKS
-from blackwell_lm.tokenizer import EOS, train_tokenizer
+from nanocoder.mcp_tools import TOOLS, RepoToolBox, render_system_prompt
+from nanocoder.model import BlackwellLM, ModelConfig
+from nanocoder.repo_agent import repo_reward, run_repo_episode
+from nanocoder.scenario import build_scenario, build_scenarios, cleanup
+from nanocoder.tasks import EASY_TASKS
+from nanocoder.tokenizer import EOS, train_tokenizer
 
 
 def _scn():
@@ -184,8 +191,8 @@ def test_repo_sft_trajectory_teaches_the_write_file_schema():
     """
     import json
 
-    from blackwell_lm.agent import parse_tool_call
-    from blackwell_lm.tool_sft import make_repo_trajectory
+    from nanocoder.agent import parse_tool_call
+    from nanocoder.tool_sft import make_repo_trajectory
 
     sc = _scn()
     msgs = make_repo_trajectory(sc)
@@ -219,8 +226,8 @@ def test_verify_bonus_requires_a_genuine_verified_pass():
     incentive, but only if it cannot be claimed by calling run_tests without
     fixing anything, nor by fixing without verifying.
     """
-    from blackwell_lm.mcp_tools import RepoToolBox
-    from blackwell_lm.repo_agent import RepoEpisode, repo_reward
+    from nanocoder.mcp_tools import RepoToolBox
+    from nanocoder.repo_agent import RepoEpisode, repo_reward
 
     sc = _scn()
     repo = sc.materialise()
@@ -269,7 +276,7 @@ def test_hard_tiers_cannot_be_solved_by_spotting_an_odd_token():
     """
     import random
 
-    from blackwell_lm.scenario import _breakages, _stub, _swap
+    from nanocoder.scenario import _breakages, _stub, _swap
 
     ref = textwrap.dedent("""
         def add(a, b):
@@ -320,11 +327,11 @@ def test_every_assistant_turn_in_a_demo_carries_a_tool_call():
     """
     import random
 
-    from blackwell_lm import chat
-    from blackwell_lm.agent import parse_tool_call
-    from blackwell_lm.scenario import build_scenarios
-    from blackwell_lm.tasks import get_tasks
-    from blackwell_lm.tool_sft import (make_repo_retry_trajectory,
+    from nanocoder import chat
+    from nanocoder.agent import parse_tool_call
+    from nanocoder.scenario import build_scenarios
+    from nanocoder.tasks import get_tasks
+    from nanocoder.tool_sft import (make_repo_retry_trajectory,
                                        make_repo_trajectory)
 
     scns = build_scenarios(get_tasks("easy"), seed=3, limit=3)

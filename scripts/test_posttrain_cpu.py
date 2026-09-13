@@ -1,3 +1,11 @@
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+import os
 """CPU tests for the post-training stack: chat format, generation, GRPO maths,
 SFT masking and cross-precision checkpoint loading. No GPU, no TE, no network.
 
@@ -7,14 +15,14 @@ healthy and learned nothing.
 """
 import torch
 
-from blackwell_lm import chat
-from blackwell_lm.checkpoint import load_weights
-from blackwell_lm.generate import completion_logprobs, generate, make_cache
-from blackwell_lm.grpo import (GRPOConfig, group_advantages, grpo_objective,
+from nanocoder import chat
+from nanocoder.checkpoint import load_weights
+from nanocoder.generate import completion_logprobs, generate, make_cache
+from nanocoder.grpo import (GRPOConfig, group_advantages, grpo_objective,
                                k3_kl, sequence_ratio)
-from blackwell_lm.model import BlackwellLM, ModelConfig
-from blackwell_lm.sft import masked_cross_entropy
-from blackwell_lm.tokenizer import EOS, train_tokenizer
+from nanocoder.model import BlackwellLM, ModelConfig
+from nanocoder.sft import masked_cross_entropy
+from nanocoder.tokenizer import EOS, train_tokenizer
 
 CORPUS = ["def f(x):\n    return x + 1\n", "### User\nhi\n\n### Assistant\nhello\n\n"] * 80
 

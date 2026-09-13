@@ -15,12 +15,12 @@ import os, sys, math, random, shutil, collections
 os.environ.setdefault("NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE", "1")
 sys.path.insert(0, "/home/ubuntu/bnano")
 import torch
-from blackwell_lm.checkpoint import load_stage_checkpoint
-from blackwell_lm.model import BlackwellLM, ModelConfig
-from blackwell_lm.repo_agent import run_repo_episode
-from blackwell_lm.scenario import build_scenarios
-from blackwell_lm.tasks import get_tasks
-from blackwell_lm.tokenizer import EOS, load_tokenizer
+from nanocoder.checkpoint import load_stage_checkpoint
+from nanocoder.model import BlackwellLM, ModelConfig
+from nanocoder.repo_agent import run_repo_episode
+from nanocoder.scenario import build_scenarios
+from nanocoder.tasks import get_tasks
+from nanocoder.tokenizer import EOS, load_tokenizer
 
 TIER = sys.argv[1] if len(sys.argv) > 1 else "stub"
 CKPT = sys.argv[2] if len(sys.argv) > 2 else "/home/ubuntu/bnano/agent_repo_ab.pt"

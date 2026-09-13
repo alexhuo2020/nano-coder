@@ -1,3 +1,11 @@
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+import os
 """Train the code-aware tokenizer on a sample of the real pretraining mixture.
 
 Trained on the SAME mixture the model will see (code-heavy), because a tokenizer
@@ -8,8 +16,8 @@ import argparse
 import itertools
 import time
 
-from blackwell_lm.data import DEFAULT_MIXTURE, stream_mixture
-from blackwell_lm.tokenizer import WHITESPACE_RUNS, train_tokenizer, token_efficiency
+from nanocoder.data import DEFAULT_MIXTURE, stream_mixture
+from nanocoder.tokenizer import WHITESPACE_RUNS, train_tokenizer, token_efficiency
 
 
 def main():

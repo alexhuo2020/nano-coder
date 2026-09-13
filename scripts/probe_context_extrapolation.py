@@ -21,6 +21,13 @@ CE over only the tokens BEYOND 2,048, which is where extrapolation actually
 gets exercised. An aggregate can look fine simply because most tokens sit in
 the region the model was trained on.
 """
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 from __future__ import annotations
 
 import argparse
@@ -28,15 +35,12 @@ import math
 import os
 import sys
 
-os.environ.setdefault("NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE", "1")
-sys.path.insert(0, "/home/ubuntu/bnano")
+os.environ.setdefault("NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE", "1")import torch
 
-import torch
-
-from blackwell_lm.checkpoint import load_stage_checkpoint
-from blackwell_lm.data import DEFAULT_MIXTURE, packed_blocks, stream_mixture
-from blackwell_lm.model import BlackwellLM, ModelConfig
-from blackwell_lm.tokenizer import EOS, load_tokenizer
+from nanocoder.checkpoint import load_stage_checkpoint
+from nanocoder.data import DEFAULT_MIXTURE, packed_blocks, stream_mixture
+from nanocoder.model import BlackwellLM, ModelConfig
+from nanocoder.tokenizer import EOS, load_tokenizer
 
 
 def evaluate(model, blocks, cfg, trained_len: int):

@@ -43,7 +43,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass, field
 
-from blackwell_lm.sandbox import run_tests
+from nanocoder.sandbox import run_tests
 
 # Same mutation family as tool_sft: small, plausible, and syntactically valid, so
 # the agent has to reason about behaviour rather than spot a SyntaxError.

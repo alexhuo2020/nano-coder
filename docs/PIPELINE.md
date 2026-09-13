@@ -43,7 +43,7 @@ downstream stages needed the strongest base at a fixed small size).
 | **final** | **1,245,117** | **2.1155** |
 
 **Two findings that changed everything downstream:** bf16 params cannot hold
-optimizer state (→ `blackwell_lm/optim.py` keeps fp32 masters), and flat loss at
+optimizer state (→ `nanocoder/optim.py` keeps fp32 masters), and flat loss at
 high LR is not saturation. See [LESSONS.md](LESSONS.md) §8–9.
 
 ---

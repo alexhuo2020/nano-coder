@@ -10,6 +10,13 @@ still produces a usable checkpoint. A multi-day single-GPU run WILL be
 interrupted; that is planned for rather than hoped against.
 """
 
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+
 from __future__ import annotations
 
 import argparse
@@ -34,10 +41,10 @@ import torch
 # resume rather than a cold start.
 os.environ.setdefault("NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE", "1")
 
-from blackwell_lm.data import (DEFAULT_MIXTURE, batches, packed_blocks, prefetch,
+from nanocoder.data import (DEFAULT_MIXTURE, batches, packed_blocks, prefetch,
                                stream_mixture)
-from blackwell_lm.model import BlackwellLM, ModelConfig, nvfp4_stochastic_rounding_ok
-from blackwell_lm.tokenizer import EOS, FIM_MIDDLE, FIM_PREFIX, FIM_SUFFIX, load_tokenizer
+from nanocoder.model import BlackwellLM, ModelConfig, nvfp4_stochastic_rounding_ok
+from nanocoder.tokenizer import EOS, FIM_MIDDLE, FIM_PREFIX, FIM_SUFFIX, load_tokenizer
 
 
 def log(msg):

@@ -38,11 +38,11 @@ if os.path.isdir("/home/ubuntu/bnano"):
 
 import torch
 
-from blackwell_lm import chat
-from blackwell_lm.checkpoint import load_stage_checkpoint
-from blackwell_lm.generate import generate
-from blackwell_lm.model import BlackwellLM, ModelConfig
-from blackwell_lm.tokenizer import EOS, load_tokenizer
+from nanocoder import chat
+from nanocoder.checkpoint import load_stage_checkpoint
+from nanocoder.generate import generate
+from nanocoder.model import BlackwellLM, ModelConfig
+from nanocoder.tokenizer import EOS, load_tokenizer
 
 import cli_adapter
 import codex_adapter
@@ -187,7 +187,7 @@ def to_chat(body, claude_code: bool = False) -> list:
     tools = body.get("tools") or []
 
     if claude_code:
-        from blackwell_lm.mcp_tools import render_system_prompt
+        from nanocoder.mcp_tools import render_system_prompt
         if CHAT_PASSTHROUGH[0] and not looks_like_a_repo_task(body):
             # A plain question gets the CHAT system prompt the instruction SFT
             # used, not the agent one. Without this the agent prompt is
@@ -432,7 +432,7 @@ class H(BaseHTTPRequestHandler):
 
     def _codex(self, body, i):
         """Serve one OpenAI Responses-API turn for Codex CLI."""
-        from blackwell_lm.mcp_tools import render_system_prompt
+        from nanocoder.mcp_tools import render_system_prompt
 
         turns = codex_adapter.input_to_turns(body)
         msgs = [{"role": chat.SYSTEM, "content": render_system_prompt()}]

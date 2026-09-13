@@ -29,7 +29,7 @@ class Task:
     # the lost reward is indistinguishable from the model being wrong.
     setup: str = ""
     # Reference solution, used ONLY to synthesise tool-use SFT trajectories
-    # (see blackwell_lm/tool_sft.py). Never shown to the policy at RL time --
+    # (see nanocoder/tool_sft.py). Never shown to the policy at RL time --
     # that would make the execution reward meaningless.
     solution: str = ""
 

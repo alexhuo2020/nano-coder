@@ -12,6 +12,13 @@ Both are printed; the second is the one that matters, because a good loss with
 no format compliance still gives GRPO nothing to work with.
 """
 
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+
 from __future__ import annotations
 
 import argparse
@@ -22,20 +29,20 @@ import signal
 import sys
 import time
 
-# Before any TE import: see blackwell_lm/checkpoint.py.
+# Before any TE import: see nanocoder/checkpoint.py.
 os.environ.setdefault("NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE", "1")
 
 import torch
 
-from blackwell_lm import chat
-from blackwell_lm.checkpoint import load_stage_checkpoint
-from blackwell_lm.generate import generate
-from blackwell_lm import metrics
-from blackwell_lm.model import BlackwellLM, ModelConfig
-from blackwell_lm.optim import MasterWeightOptimizer, frozen_report
-from blackwell_lm.sft import (DEFAULT_SFT_MIXTURE, masked_cross_entropy,
+from nanocoder import chat
+from nanocoder.checkpoint import load_stage_checkpoint
+from nanocoder.generate import generate
+from nanocoder import metrics
+from nanocoder.model import BlackwellLM, ModelConfig
+from nanocoder.optim import MasterWeightOptimizer, frozen_report
+from nanocoder.sft import (DEFAULT_SFT_MIXTURE, masked_cross_entropy,
                               sft_batches, stream_sft)
-from blackwell_lm.tokenizer import EOS, load_tokenizer
+from nanocoder.tokenizer import EOS, load_tokenizer
 
 
 def log(msg):
@@ -88,7 +95,7 @@ def tool_call_rate(model, tok, eos_id, n=4, n_loops=None):
     the convention by itself -- which is exactly how the first agentic run ended
     up as single-turn RL with 0 tool calls across 100 episodes.
     """
-    from blackwell_lm.agent import AGENT_SYSTEM, parse_tool_call
+    from nanocoder.agent import AGENT_SYSTEM, parse_tool_call
 
     hits = 0
     qs = ["Write a function add(a, b) that returns a + b.",
@@ -200,8 +207,8 @@ def main():
     if a.tool_frac > 0:
         import random as _random
 
-        from blackwell_lm.tasks import get_tasks
-        from blackwell_lm.tool_sft import stream_tool_sft
+        from nanocoder.tasks import get_tasks
+        from nanocoder.tool_sft import stream_tool_sft
 
         base_tasks = get_tasks(a.tool_task_set)
         if a.tool_holdout:
@@ -213,8 +220,8 @@ def main():
         if a.tool_mode == "snippet":
             tool_stream = stream_tool_sft(base_tasks, seed=1)
         else:
-            from blackwell_lm.scenario import build_scenarios
-            from blackwell_lm.tool_sft import stream_repo_sft
+            from nanocoder.scenario import build_scenarios
+            from nanocoder.tool_sft import stream_repo_sft
 
             tiers = [t.strip() for t in a.tool_difficulty.split(",")
                      if t.strip()]

@@ -20,6 +20,13 @@ for intermediate tool successes is trivially farmed by calling a passing tool in
 a loop and never answering.
 """
 
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+
 from __future__ import annotations
 
 import argparse
@@ -34,18 +41,18 @@ os.environ.setdefault("NVTE_ALLOW_UNSAFE_PICKLE_EXTRA_STATE", "1")
 
 import torch
 
-from blackwell_lm.agent import ToolBox, episode_reward, run_episode
-from blackwell_lm.repo_agent import run_repo_episode
-from blackwell_lm.scenario import build_scenarios
-from blackwell_lm.checkpoint import load_stage_checkpoint
-from blackwell_lm.generate import completion_logprobs
-from blackwell_lm.grpo import GRPOConfig, group_advantages, grpo_objective
-from blackwell_lm import metrics
-from blackwell_lm.model import BlackwellLM, ModelConfig
-from blackwell_lm.optim import MasterWeightOptimizer, frozen_report
-from blackwell_lm.sandbox import posix_limits_active
-from blackwell_lm.tasks import get_tasks
-from blackwell_lm.tokenizer import EOS, load_tokenizer
+from nanocoder.agent import ToolBox, episode_reward, run_episode
+from nanocoder.repo_agent import run_repo_episode
+from nanocoder.scenario import build_scenarios
+from nanocoder.checkpoint import load_stage_checkpoint
+from nanocoder.generate import completion_logprobs
+from nanocoder.grpo import GRPOConfig, group_advantages, grpo_objective
+from nanocoder import metrics
+from nanocoder.model import BlackwellLM, ModelConfig
+from nanocoder.optim import MasterWeightOptimizer, frozen_report
+from nanocoder.sandbox import posix_limits_active
+from nanocoder.tasks import get_tasks
+from nanocoder.tokenizer import EOS, load_tokenizer
 
 
 def log(msg):

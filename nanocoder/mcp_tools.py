@@ -27,7 +27,7 @@ import subprocess
 import sys
 import tempfile
 
-from blackwell_lm.sandbox import posix_limits_active, run_python
+from nanocoder.sandbox import posix_limits_active, run_python
 
 MAX_OUTPUT_CHARS = 1200
 ERR = "error: "
@@ -206,7 +206,7 @@ class RepoToolBox:
             return f"{ERR}solution.py not found in the repo"
         with open(sol, encoding="utf-8", errors="replace") as fh:
             code = fh.read()
-        from blackwell_lm.sandbox import run_tests as _rt
+        from nanocoder.sandbox import run_tests as _rt
         passed, total, detail = _rt(code, self.tests, timeout=self.timeout,
                                     setup=self.setup)
         note = ("\n(note: the tests are fixed by the task; yours were ignored)"

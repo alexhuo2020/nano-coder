@@ -9,13 +9,20 @@ the POSIX resource limits; on Windows those do not exist and the affected tests
 SKIP loudly rather than passing vacuously -- a green run on Windows must not be
 mistaken for a validated sandbox.
 """
+
+# Run from anywhere: put the repo root on sys.path so this works without
+# the caller having set PYTHONPATH. Aliased imports keep it independent of
+# whatever the module imports below.
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import os
 import sys
 
-from blackwell_lm.agent import (AGENT_SYSTEM, MAX_TOOL_CHARS, Episode, ToolBox,
+from nanocoder.agent import (AGENT_SYSTEM, MAX_TOOL_CHARS, Episode, ToolBox,
                                 episode_reward, parse_tool_call, run_episode)
-from blackwell_lm.reward import code_reward, extract_code
-from blackwell_lm.sandbox import posix_limits_active, run_python, run_tests
+from nanocoder.reward import code_reward, extract_code
+from nanocoder.sandbox import posix_limits_active, run_python, run_tests
 
 SKIPS = []
 
@@ -98,7 +105,7 @@ def test_network_isolation_is_NOT_claimed():
     but until then, do not claim a protection that is not there.
     """
     assert "not a containment boundary" in __import__(
-        "blackwell_lm.sandbox", fromlist=["x"]).__doc__
+        "nanocoder.sandbox", fromlist=["x"]).__doc__
     print("test_network_isolation_is_NOT_claimed: PASS (limitation documented)")
 
 
@@ -251,8 +258,8 @@ def test_run_episode_terminates_with_an_untrained_model():
     an Episode rather than raising."""
     import torch
 
-    from blackwell_lm.model import BlackwellLM, ModelConfig
-    from blackwell_lm.tokenizer import EOS, train_tokenizer
+    from nanocoder.model import BlackwellLM, ModelConfig
+    from nanocoder.tokenizer import EOS, train_tokenizer
 
     tok = train_tokenizer(["def f():\n    return 1\n"] * 60, vocab_size=512,
                           out_path="/tmp/test_agent_tok.json")
@@ -283,7 +290,7 @@ def test_toolbox_ignores_model_supplied_tests():
     Correct code then scored zero against a hallucinated assert, every episode
     scored 0, and the agentic stage produced zero update steps.
     """
-    from blackwell_lm.tasks import EASY_TASKS
+    from nanocoder.tasks import EASY_TASKS
 
     task = next(t for t in EASY_TASKS if t.name == "identity")
     tb = ToolBox().for_task(task)

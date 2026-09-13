@@ -208,7 +208,7 @@ def strip_line_numbers(text: str) -> str:
 # the model's measured tool-call rate would stop predicting its served
 # behaviour. This was written as a private regex first; reusing the trained
 # definition is the only way the two stay the same thing.
-from blackwell_lm.agent import TOOL_FENCE, parse_tool_call
+from nanocoder.agent import TOOL_FENCE, parse_tool_call
 
 
 def split_model_output(text: str):

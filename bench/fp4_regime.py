@@ -20,7 +20,7 @@ import json
 
 import torch
 
-from blackwell_lm.model import ModelConfig, nvfp4_stochastic_rounding_ok
+from nanocoder.model import ModelConfig, nvfp4_stochastic_rounding_ok
 from bench.throughput import run
 
 

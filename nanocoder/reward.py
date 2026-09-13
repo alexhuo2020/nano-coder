@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 
-from blackwell_lm.sandbox import run_tests
+from nanocoder.sandbox import run_tests
 
 _FENCE = re.compile(r"```(?:python|py)?\s*\n(.*?)(?:```|\Z)", re.DOTALL)
 _CODEISH = re.compile(r"^\s*(def |class |import |from |@|#|if |for |while |return )")

@@ -26,9 +26,9 @@ import json
 import random
 import re
 
-from blackwell_lm.agent import AGENT_SYSTEM
-from blackwell_lm.chat import ASSISTANT, SYSTEM, TOOL, USER
-from blackwell_lm.sandbox import run_tests
+from nanocoder.agent import AGENT_SYSTEM
+from nanocoder.chat import ASSISTANT, SYSTEM, TOOL, USER
+from nanocoder.sandbox import run_tests
 
 # Small, targeted mutations that usually break a solution while keeping it
 # syntactically valid -- a SyntaxError would teach a different (and less useful)
@@ -161,8 +161,8 @@ def make_repo_trajectory(scenario, tool_timeout: float = 10.0):
     materialised repo, so the trajectory teaches the real environment rather
     than a plausible-looking imitation of it.
     """
-    from blackwell_lm.mcp_tools import RepoToolBox, render_system_prompt
-    from blackwell_lm.scenario import cleanup
+    from nanocoder.mcp_tools import RepoToolBox, render_system_prompt
+    from nanocoder.scenario import cleanup
 
     repo = scenario.materialise()
     try:
@@ -218,8 +218,8 @@ def make_repo_retry_trajectory(scenario, rng, tool_timeout: float = 10.0):
     a plausible-looking imitation of a failure, which would teach the model to
     expect error text that never occurs.
     """
-    from blackwell_lm.mcp_tools import RepoToolBox, render_system_prompt
-    from blackwell_lm.scenario import _breakages, cleanup
+    from nanocoder.mcp_tools import RepoToolBox, render_system_prompt
+    from nanocoder.scenario import _breakages, cleanup
 
     repo = scenario.materialise()
     try:

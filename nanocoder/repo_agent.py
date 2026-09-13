@@ -35,11 +35,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from blackwell_lm import chat
-from blackwell_lm.agent import TurnRecord, parse_tool_call
-from blackwell_lm.mcp_tools import RepoToolBox, render_system_prompt
-from blackwell_lm.sandbox import run_tests
-from blackwell_lm.scenario import cleanup
+from nanocoder import chat
+from nanocoder.agent import TurnRecord, parse_tool_call
+from nanocoder.mcp_tools import RepoToolBox, render_system_prompt
+from nanocoder.sandbox import run_tests
+from nanocoder.scenario import cleanup
 
 
 @dataclass
@@ -92,7 +92,7 @@ def run_repo_episode(model, tok, scenario, eos_id: int, max_turns: int = 6,
     let one episode's edits leak into the next -- silently correlating rewards
     that the group-relative advantage assumes are independent.
     """
-    from blackwell_lm.generate import generate
+    from nanocoder.generate import generate
 
     repo = scenario.materialise()
     tb = RepoToolBox(repo, tests=scenario.tests, setup=scenario.setup,

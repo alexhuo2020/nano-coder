@@ -157,7 +157,7 @@ def packed_blocks(
     Documents are tokenized in batches: `encode_batch` runs the Rust tokenizer
     across threads, which is markedly faster than a Python loop of `encode`.
     """
-    from blackwell_lm.tokenizer import fim_transform
+    from nanocoder.tokenizer import fim_transform
 
     rng = random.Random(seed)
     buf: List[int] = []

@@ -26,8 +26,8 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from blackwell_lm.chat import ASSISTANT, SYSTEM, TOOL, USER, tokenize_prompt
-from blackwell_lm.sandbox import run_python, run_tests
+from nanocoder.chat import ASSISTANT, SYSTEM, TOOL, USER, tokenize_prompt
+from nanocoder.sandbox import run_python, run_tests
 
 TOOL_FENCE = re.compile(r"```tool\s*\n(.*?)(?:```|\Z)", re.DOTALL)
 
@@ -102,7 +102,7 @@ def parse_tool_call(text: str):
 
 
 def _has_code(text: str) -> bool:
-    from blackwell_lm.reward import extract_code
+    from nanocoder.reward import extract_code
     return bool(extract_code(text or ""))
 
 
@@ -205,7 +205,7 @@ def run_episode(model, tok, question: str, toolbox: ToolBox, eos_id: int,
     1.0, untruncated) because `generate` refuses to return log-probs from a
     modified distribution -- see generate() for why that matters.
     """
-    from blackwell_lm.generate import generate
+    from nanocoder.generate import generate
 
     ep = Episode(messages=[{"role": SYSTEM, "content": AGENT_SYSTEM},
                            {"role": USER, "content": question}])
@@ -261,5 +261,5 @@ def episode_reward(ep: Episode, tests: list[str], timeout: float = 6.0,
     helpful and is a reward-hacking surface: the cheapest way to farm per-turn
     credit is to call a trivially-passing tool repeatedly and never answer.
     """
-    from blackwell_lm.reward import code_reward
+    from nanocoder.reward import code_reward
     return code_reward(ep.final, tests, timeout=timeout, setup=setup)
